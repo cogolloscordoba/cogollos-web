@@ -30,12 +30,17 @@ const PASOS = [
 ];
 
 async function askClaude(messages) {
+  const ultimoMensaje = messages.filter(m => m.role === "user").pop();
+  const historial = messages.filter(m => m.role === "user" || m.role === "assistant").slice(0, -1);
+  
+  console.log("MENSAJE:", ultimoMensaje?.content, "HISTORIAL:", historial.length);
+  
   const res = await fetch("https://cogollos.app.n8n.cloud/webhook/chat-web", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      mensaje: messages[messages.length - 1].content,
-      historial: messages.slice(1, -1),
+      mensaje: ultimoMensaje?.content || "",
+      historial: historial,
     }),
   });
   const text = await res.text();
