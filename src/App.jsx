@@ -30,54 +30,21 @@ const PASOS = [
 ];
 
 async function askClaude(messages) {
-  const system = `Sos el asistente oficial de Cogollos Córdoba, una Asociación Civil sin fines de lucro fundada en 2001, primera asociación cannábica de Argentina. Habilitada por REPROCANN desde la vigencia de la ley para cultivar cannabis medicinal de forma legal (Res. IPJ 207 C/21).
-
-HISTORIA: Fundada en 2001 por cultivadores, cultivadoras y activistas. Edith "La Negra" Moreno fue su principal impulsora y figura fundacional.
-
-CATÁLOGO (flor seca, paquetes cerrados de 5g, $30.000 c/u, $6.000/g):
-- Edith1 | Sativa | Alto THC | Activadora, energizante | Todo el día
-- Edith 2 INTA | Híbrido | Alto THC | Relax y feliz, cítrica | Todo el día
-- Cogollos INTA THC | Híbrido | Alto THC | Frutal, mango y especias | Tarde
-- Cogollos INTA CBD | CBD <0.5% THC | Relax sin sueño, antiansioso | Todo el día
-- Kordoba Kush | Indica | Alto THC | Relajante profunda, pino y limón | Noche
-
-PROCESO DE ASOCIACIÓN:
-1. Alta en REPROCANN: reprocann.msal.gob.ar → perfil Paciente → tipo cultivo "Otro" → guardar código de vinculación
-2. Cita médica virtual $30.000: formulario https://forms.gle/5USo1C2WcBGeG9Qz5
-3. Vinculación en Cannalizar con guía del equipo médico
-
-CASO ESPECIAL - Ya tenés REPROCANN activo:
-- Opción A: Convenio bilateral — declarás que no podés cultivar y cedés el cultivo a la ONG (firmás con abogado)
-- Opción B: Dar de baja el REPROCANN y realizar todo el proceso nuevamente
-En ambos casos hay consulta médica con nuestro director.
-
-CONTACTO: cogollosargentina@gmail.com | WhatsApp socios: +54 9 3518 05-7172
-Instagram: @asociacioncivilcogolloscordoba | Facebook: LaEdithMorenoCogollosCBA
-
-REGLAS:
-- Hablá en español rioplatense, cálido y claro
-- Solo socios verificados pueden comprar
-- No des diagnósticos ni recomendaciones de dosis médicas
-- Si no sabés algo, derivá al WhatsApp: +54 9 3518 05-7172
-- Respuestas cortas, máximo 3 párrafos`;
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch("https://cogollos.app.n8n.cloud/webhook/chat-web", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 500,
-      system,
-      messages,
+      mensaje: messages[messages.length - 1].content,
+      historial: messages.slice(1, -1),
     }),
   });
-  const data = await res.json();
-  return data.content?.[0]?.text || "Perdoná, hubo un error. Escribinos al WhatsApp +54 9 3518 05-7172";
+  const text = await res.text();
+  return text || "Perdoná, hubo un error. Escribinos al WhatsApp +54 9 3518 05-7172";
 }
 
 function Chat() {
   const [msgs, setMsgs] = useState([
-    { role: "assistant", content: "Hola, soy el asistente de Cogollos Córdoba. Podés preguntarme sobre nuestras variedades, el proceso de asociación o lo que necesites." }
+    { role: "assistant", content: "Hola, soy Cogo-Bot, el asistente de Cogollos Córdoba. Podés preguntarme sobre nuestras variedades, el proceso de asociación o lo que necesites." }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -89,11 +56,11 @@ function Chat() {
     if (!input.trim() || loading) return;
     const text = input.trim();
     setInput("");
-    const history = [...msgs, { role: "user", content: text }];
+    const history = [...msgs.filter((m, i) => i > 0), { role: "user", content: text }];
     setMsgs(history);
     setLoading(true);
     try {
-      const apiMsgs = history.slice(1).map(m => ({ role: m.role, content: m.content }));
+      const apiMsgs = history.map(m => ({ role: m.role, content: m.content }));
       const reply = await askClaude(apiMsgs);
       setMsgs(m => [...m, { role: "assistant", content: reply }]);
     } catch {
@@ -110,7 +77,7 @@ function Chat() {
         <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 32, filter: "brightness(0) invert(1)" }} />
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#6FD67F" }} />
-          <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: F }}>Asistente en línea</span>
+          <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: F }}>Cogo-Bot en línea</span>
         </div>
       </div>
 
@@ -123,6 +90,7 @@ function Chat() {
               color: m.role === "user" ? "#fff" : C.dark,
               borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
               fontSize: 14, lineHeight: 1.6, fontFamily: F,
+              whiteSpace: "pre-wrap",
             }}>{m.content}</div>
           </div>
         ))}
@@ -393,12 +361,12 @@ export default function App() {
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
             <div>
-              <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>ASISTENTE VIRTUAL</div>
+              <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>COGO-BOT</div>
               <h2 style={{ fontSize: "clamp(26px, 3.5vw, 38px)", fontWeight: 700, color: C.dark, marginBottom: 20, lineHeight: 1.2 }}>
                 Consulta sin compromiso
               </h2>
               <p style={{ color: C.body, fontSize: 16, lineHeight: 1.75, marginBottom: 28 }}>
-                Nuestro asistente puede responder tus dudas sobre el proceso de asociación, las variedades, la consulta médica y todo lo que necesites saber.
+                Cogo-Bot puede responder tus dudas sobre el proceso de asociación, las variedades, la consulta médica y todo lo que necesites saber.
               </p>
               {["Proceso de asociación y REPROCANN", "Variedades y efectos de cada una", "Precios y modalidad de entrega", "Consultas sobre la vinculación médica"].map(item => (
                 <div key={item} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
@@ -421,11 +389,11 @@ export default function App() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ background: C.dark, padding: "60px 6% 32px" }}>
+      <footer style={{ background: "#000000", padding: "60px 6% 32px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 40, marginBottom: 48 }}>
             <div>
-              <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 48, marginBottom: 16, }} />
+              <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 48, marginBottom: 16 }} />
               <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.7, maxWidth: 280, marginBottom: 16 }}>
                 Asociación Civil sin fines de lucro. Fundada en 2001. Habilitada por REPROCANN para el cultivo de cannabis medicinal.
               </p>
