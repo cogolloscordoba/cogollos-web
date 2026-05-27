@@ -13,13 +13,7 @@ const F = "'Roboto', Arial, sans-serif";
 const ADMIN_USER = "C0g026IPJ";
 const ADMIN_PASS = "789996g!!#";
 
-// ─── Supabase ───────────────────────────────────────────────────────
-const SB_URL = "https://mphiidkjfjxcqrrfbpfu.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1waGlpZGtqZmp4Y3FycmZicGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4NTAyOTMsImV4cCI6MjA2MzQyNjI5M30.IRIHLRudXDnRVx-DqGSl8-sBLDUsaJ1j5re5_JHbSoE";
-const sbFetch = (path, opts = {}) => fetch(`${SB_URL}/rest/v1/${path}`, {
-  ...opts,
-  headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", ...opts.headers },
-});
+
 
 // ─── Datos estáticos ────────────────────────────────────────────────
 const VARIEDADES = [
