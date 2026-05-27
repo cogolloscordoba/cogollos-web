@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const SB_URL = "https://mphiidkjfjxcqrrfbpfu.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1waGlpZGtqZmp4Y3FycmZicGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4NTAyOTMsImV4cCI6MjA2MzQyNjI5M30.IRIHLRudXDnRVx-DqGSl8-sBLDUsaJ1j5re5_JHbSoE";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1waGlpZGtqZmp4Y3FycmZicGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NzczMzIsImV4cCI6MjA5NDM1MzMzMn0.ons8D67XR92jlpCb-ORTBeqbFVcgozQy4Zqpd8s7hlI";
 
 const sb = async (path, opts = {}) => {
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
@@ -699,7 +699,7 @@ export default function Dashboard({ onLogout }) {
 
       {/* Header */}
       <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 60, gap: 16, position: "sticky", top: 0, zIndex: 50 }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30 }} />
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30, filter: "brightness(0) invert(1)" }} />
         {isMobile ? (
           <button onClick={() => setMenuOpen(o => !o)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#fff", fontSize: 22 }}>☰</button>
         ) : (
