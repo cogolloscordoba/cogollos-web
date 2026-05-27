@@ -837,6 +837,185 @@ function Productos({ toast }) {
 }
 
 // ── DASHBOARD PRINCIPAL ──────────────────────────────────────────────
+// ── FACTURACIÓN ───────────────────────────────────────────────────────
+function Facturacion({ toast }) {
+  const [pedidos, setPedidos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [periodo, setPeriodo] = useState("mes");
+  const [metodoPago, setMetodoPago] = useState("todos");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const data = await sb("pedidos?select=*,socios(nombre,dni),productos(nombre)&order=created_at.desc");
+    setPedidos(Array.isArray(data) ? data : []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const marcarPagado = async (id, pagado) => {
+    await sb(`pedidos?id=eq.${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ pagado, fecha_pago: pagado ? new Date().toISOString() : null }),
+    });
+    setPedidos(ps => ps.map(p => p.id === id ? { ...p, pagado, fecha_pago: pagado ? new Date().toISOString() : null } : p));
+    toast(pagado ? "Marcado como pagado" : "Marcado como pendiente de pago");
+  };
+
+  const exportarCSV = () => {
+    const filas = filtrados.map(p => [
+      p.numero_orden || "—",
+      new Date(p.created_at).toLocaleDateString("es-AR"),
+      p.socios?.nombre || "—",
+      p.socios?.dni || "—",
+      p.productos?.nombre || "—",
+      p.cantidad,
+      p.precio_unitario || 0,
+      (p.precio_unitario || 0) * p.cantidad,
+      p.metodo_pago,
+      p.estado,
+      p.pagado ? "Si" : "No",
+      p.turno_delivery,
+    ]);
+    const headers = ["N° Orden","Fecha","Socio","DNI","Producto","Cant.","Precio Unit.","Total","Método Pago","Estado","Pagado","Turno"];
+    const csv = [headers, ...filas].map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `facturacion_cogollos_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  };
+
+  const ahora = new Date();
+  const filtradosPeriodo = pedidos.filter(p => {
+    const fecha = new Date(p.created_at);
+    if (periodo === "hoy") return fecha.toDateString() === ahora.toDateString();
+    if (periodo === "semana") return (ahora - fecha) < 7 * 24 * 60 * 60 * 1000;
+    if (periodo === "mes") return fecha.getMonth() === ahora.getMonth() && fecha.getFullYear() === ahora.getFullYear();
+    return true;
+  });
+
+  const filtrados = metodoPago === "todos" ? filtradosPeriodo : filtradosPeriodo.filter(p => p.metodo_pago === metodoPago);
+
+  const totalFacturado = filtrados.reduce((s, p) => s + (p.precio_unitario || 0) * p.cantidad, 0);
+  const totalPagado = filtrados.filter(p => p.pagado).reduce((s, p) => s + (p.precio_unitario || 0) * p.cantidad, 0);
+  const totalPendiente = totalFacturado - totalPagado;
+
+  const porMetodo = filtrados.reduce((acc, p) => {
+    const m = p.metodo_pago || "efectivo";
+    acc[m] = (acc[m] || 0) + (p.precio_unitario || 0) * p.cantidad;
+    return acc;
+  }, {});
+
+  const porTurno = filtrados.reduce((acc, p) => {
+    const t = p.turno_delivery || "sin turno";
+    acc[t] = (acc[t] || 0) + (p.precio_unitario || 0) * p.cantidad;
+    return acc;
+  }, {});
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Facturación</h2>
+        <button onClick={exportarCSV} style={{ ...btnPrimary, background: C.green }}>Exportar CSV</button>
+      </div>
+
+      {/* Filtros */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+        {[["hoy","Hoy"],["semana","Esta semana"],["mes","Este mes"],["todo","Todo"]].map(([v,l]) => (
+          <button key={v} onClick={() => setPeriodo(v)} style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: periodo===v ? "none" : `1px solid ${C.border}`, background: periodo===v ? C.dark : C.white, color: periodo===v ? "#fff" : C.muted, fontFamily: F }}>{l}</button>
+        ))}
+        <select value={metodoPago} onChange={e => setMetodoPago(e.target.value)} style={{ ...inputStyle, width: "auto", marginLeft: "auto" }}>
+          <option value="todos">Todos los métodos</option>
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="mercadopago">MercadoPago</option>
+        </select>
+      </div>
+
+      {/* Stats principales */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px,1fr))", gap: 12, marginBottom: 24 }}>
+        {[
+          ["Total facturado", `$${totalFacturado.toLocaleString("es-AR")}`, C.dark],
+          ["Cobrado", `$${totalPagado.toLocaleString("es-AR")}`, C.green],
+          ["Pendiente de cobro", `$${totalPendiente.toLocaleString("es-AR")}`, "#991B1B"],
+          ["Pedidos", filtrados.length, C.text],
+        ].map(([l,v,c]) => (
+          <div key={l} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px" }}>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{l}</div>
+            <div style={{ fontSize: typeof v === "number" ? 26 : 20, fontWeight: 700, color: c }}>{v}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Por método y por turno */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
+        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Por método de pago</div>
+          {Object.entries(porMetodo).length === 0 ? <div style={{ color: C.muted, fontSize: 13 }}>Sin datos</div> : Object.entries(porMetodo).map(([m,v]) => (
+            <div key={m} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13 }}>
+              <span style={{ color: C.muted, textTransform: "capitalize" }}>{m}</span>
+              <span style={{ fontWeight: 700, color: C.text }}>${v.toLocaleString("es-AR")}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Por turno de delivery</div>
+          {Object.entries(porTurno).length === 0 ? <div style={{ color: C.muted, fontSize: 13 }}>Sin datos</div> : Object.entries(porTurno).map(([t,v]) => (
+            <div key={t} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13 }}>
+              <span style={{ color: C.muted, textTransform: "capitalize" }}>{t}</span>
+              <span style={{ fontWeight: 700, color: C.text }}>${v.toLocaleString("es-AR")}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Lista de pedidos */}
+      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Detalle de pedidos ({filtrados.length})</div>
+          <div style={{ fontSize: 12, color: C.muted }}>{filtrados.filter(p=>p.pagado).length} pagados · {filtrados.filter(p=>!p.pagado).length} pendientes</div>
+        </div>
+        {loading ? <div style={{ padding: "40px 0", textAlign: "center", color: C.muted }}>Cargando...</div> : filtrados.length === 0 ? <div style={{ padding: "40px 0", textAlign: "center", color: C.muted }}>Sin pedidos en este período</div> : (
+          <div>
+            {filtrados.map(p => {
+              const total = (p.precio_unitario || 0) * p.cantidad;
+              const fecha = new Date(p.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+              return (
+                <div key={p.id} style={{ padding: "12px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: p.pagado ? "#F8FFF9" : C.white }}>
+                  <div style={{ fontSize: 12, color: C.muted, width: 60, flexShrink: 0 }}>#{p.numero_orden || "—"}</div>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 3 }}>{p.socios?.nombre || "—"}</div>
+                    <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <span>{p.productos?.nombre || "—"} × {p.cantidad}</span>
+                      <span style={{ textTransform: "capitalize" }}>{p.metodo_pago}</span>
+                      <span>{p.turno_delivery}</span>
+                      <span>{fecha}</span>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: C.dark, minWidth: 80, textAlign: "right" }}>${total.toLocaleString("es-AR")}</div>
+                  <button
+                    onClick={() => marcarPagado(p.id, !p.pagado)}
+                    style={{
+                      padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "none",
+                      background: p.pagado ? "#EAF3DE" : "#FAEEDA",
+                      color: p.pagado ? "#27500A" : "#633806",
+                      minWidth: 90,
+                    }}
+                  >
+                    {p.pagado ? "Pagado" : "Sin cobrar"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard({ onLogout }) {
   const isMobile = useIsMobile();
   const [seccion, setSeccion] = useState("tickets");
@@ -849,6 +1028,7 @@ export default function Dashboard({ onLogout }) {
     { id: "tickets", label: "Tickets" },
     { id: "pedidos", label: "Pedidos" },
     { id: "delivery", label: "Delivery" },
+    { id: "facturacion", label: "Facturación" },
     { id: "socios", label: "Socios" },
     { id: "productos", label: "Productos" },
   ];
@@ -892,6 +1072,7 @@ export default function Dashboard({ onLogout }) {
         {seccion === "tickets" && <Tickets toast={toast} />}
         {seccion === "pedidos" && <Pedidos toast={toast} />}
         {seccion === "delivery" && <Delivery toast={toast} />}
+        {seccion === "facturacion" && <Facturacion toast={toast} />}
         {seccion === "socios" && <Socios toast={toast} />}
         {seccion === "productos" && <Productos toast={toast} />}
       </div>
