@@ -190,7 +190,7 @@ function Login({ onLogin }) {
           </form>
         </div>
         <p style={{ textAlign: "center", marginTop: 24, fontSize: 13, color: C.muted }}>
-          <a href="#" onClick={() => { window.location.hash = ""; }} style={{ color: C.green, textDecoration: "none", fontWeight: 500 }}>← Volver al sitio</a>
+          <button onClick={() => { window.location.hash = ""; }} style={{ background: "none", border: "none", color: C.green, cursor: "pointer", fontWeight: 500, fontSize: 13, fontFamily: F }}>← Volver al sitio</button>
         </p>
       </div>
     </div>
