@@ -159,7 +159,7 @@ function Chat({ socio }) {
   return (
     <div style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
       <div style={{ background: C.dark, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 28, filter: "brightness(0) invert(1)" }} />
+        <img src="/logo.png" alt="Cogollos" style={{ height: 28 }} />
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#6FD67F" }} />
           <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}>Cogo-Bot</span>
@@ -263,7 +263,7 @@ function ZonaSocios({ socio, onLogout }) {
 
       {/* Header */}
       <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 60, position: "sticky", top: 0, zIndex: 50 }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30, filter: "brightness(0) invert(1)" }} />
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30 }} />
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>Hola, {socio.nombre.split(" ")[0]}</span>
           <button onClick={onLogout} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>Salir</button>
@@ -492,7 +492,7 @@ function FormularioAlta() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
 
       <div style={{ background: C.dark, padding: "0 6%", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30, filter: "brightness(0) invert(1)" }} />
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30}} />
         <button onClick={() => window.location.hash = ""} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>← Volver</button>
       </div>
 
@@ -606,7 +606,7 @@ function LoginSocios({ onLogin }) {
         <div style={{ width: "45%", background: C.dark, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "48px", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 30% 70%, rgba(43,122,62,0.4) 0%, transparent 60%)" }} />
           <div style={{ position: "relative" }}>
-            <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 56, marginBottom: 40, filter: "brightness(0) invert(1)" }} />
+            <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 56, marginBottom: 40}} />
             <h2 style={{ fontSize: 28, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 16 }}>Zona exclusiva para socios</h2>
             <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, lineHeight: 1.7 }}>Accedé al catálogo de variedades disponibles, solicitá tus retiros y consultá el estado de tus pedidos.</p>
           </div>
@@ -956,7 +956,7 @@ function PortalMedico({ onLogout }) {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } input, select, textarea { font-family: inherit; }`}</style>
 
       <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 60, position: "sticky", top: 0, zIndex: 50 }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30, filter: "brightness(0) invert(1)" }} />
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30}} />
         <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginLeft: 12 }}>Portal médico</span>
         <button onClick={onLogout} style={{ marginLeft: "auto", background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>Salir</button>
       </div>
@@ -1085,7 +1085,7 @@ function Autocultivo() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } html { scroll-behavior: smooth; }`}</style>
 
       <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30, filter: "brightness(0) invert(1)", cursor: "pointer" }} onClick={() => window.location.hash = ""} />
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30, cursor: "pointer" }} onClick={() => window.location.hash = ""} />
         <button onClick={() => window.location.hash = ""} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>← Inicio</button>
       </div>
 
