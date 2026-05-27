@@ -699,7 +699,7 @@ export default function Dashboard({ onLogout }) {
 
       {/* Header */}
       <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 60, gap: 16, position: "sticky", top: 0, zIndex: 50 }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30, filter: "brightness(0) invert(1)" }} />
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30 }} />
         {isMobile ? (
           <button onClick={() => setMenuOpen(o => !o)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#fff", fontSize: 22 }}>☰</button>
         ) : (
