@@ -69,22 +69,164 @@ const btnPrimary = { background: C.dark, color: "#fff", border: "none", borderRa
 const btnSecondary = { background: "transparent", color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "10px 20px", fontSize: 14, cursor: "pointer", fontFamily: F };
 
 // ── TICKETS ──────────────────────────────────────────────────────────
+const EQUIPO = ["Irene", "Delivery", "Administrativo", "Stock", "Médica"];
+
+function TicketModal({ ticket, socios, onClose, onSave, toast }) {
+  const [form, setForm] = useState({
+    tipo: ticket?.tipo || "consulta",
+    prioridad: ticket?.prioridad || "media",
+    resumen: ticket?.resumen || "",
+    estado: ticket?.estado || "abierto",
+    asignado_a: ticket?.asignado_a || "",
+    socio_id: ticket?.socio_id || "",
+    telefono: ticket?.telefono || "",
+    notas_internas: ticket?.notas_internas || "",
+  });
+  const [nota, setNota] = useState("");
+  const [saving, setSaving] = useState(false);
+  const historial = ticket?.historial || [];
+
+  const guardar = async () => {
+    setSaving(true);
+    const updates = { ...form, updated_at: new Date().toISOString() };
+    if (ticket?.id) {
+      await sb(`tickets?id=eq.${ticket.id}`, { method: "PATCH", body: JSON.stringify(updates) });
+      toast("Ticket guardado");
+    } else {
+      await sb("tickets", { method: "POST", body: JSON.stringify({ ...updates, id: Date.now().toString(), historial: [] }) });
+      toast("Ticket creado");
+    }
+    onSave();
+    onClose();
+    setSaving(false);
+  };
+
+  const agregarNota = async () => {
+    if (!nota.trim()) return;
+    const nuevaEntrada = { texto: nota, autor: "Equipo", fecha: new Date().toISOString() };
+    const nuevoHistorial = [...historial, nuevaEntrada];
+    await sb(`tickets?id=eq.${ticket.id}`, { method: "PATCH", body: JSON.stringify({ historial: nuevoHistorial, updated_at: new Date().toISOString() }) });
+    setNota("");
+    toast("Nota agregada");
+    onSave();
+  };
+
+  return (
+    <Modal title={ticket?.id ? "Editar ticket" : "Nuevo ticket"} onClose={onClose}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ gridColumn: "1/-1" }}>
+          <Field label="Resumen">
+            <input value={form.resumen} onChange={e => setForm(f=>({...f, resumen: e.target.value}))} style={inputStyle} />
+          </Field>
+        </div>
+        <Field label="Tipo">
+          <select value={form.tipo} onChange={e => setForm(f=>({...f, tipo: e.target.value}))} style={inputStyle}>
+            <option value="consulta">Consulta</option>
+            <option value="compra">Compra</option>
+            <option value="medica">Médica</option>
+            <option value="seguimiento">Seguimiento</option>
+            <option value="general">General</option>
+            <option value="asociarse">Asociarse</option>
+          </select>
+        </Field>
+        <Field label="Prioridad">
+          <select value={form.prioridad} onChange={e => setForm(f=>({...f, prioridad: e.target.value}))} style={inputStyle}>
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </Field>
+        <Field label="Estado">
+          <select value={form.estado} onChange={e => setForm(f=>({...f, estado: e.target.value}))} style={inputStyle}>
+            <option value="abierto">Abierto</option>
+            <option value="en_proceso">En proceso</option>
+            <option value="cerrado">Cerrado</option>
+          </select>
+        </Field>
+        <Field label="Asignado a">
+          <select value={form.asignado_a} onChange={e => setForm(f=>({...f, asignado_a: e.target.value}))} style={inputStyle}>
+            <option value="">Sin asignar</option>
+            {EQUIPO.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </Field>
+        <div style={{ gridColumn: "1/-1" }}>
+          <Field label="Vincular socio">
+            <select value={form.socio_id} onChange={e => setForm(f=>({...f, socio_id: e.target.value}))} style={inputStyle}>
+              <option value="">Sin socio vinculado</option>
+              {socios.map(s => <option key={s.id} value={s.id}>{s.nombre} · DNI {s.dni}</option>)}
+            </select>
+          </Field>
+        </div>
+        <div style={{ gridColumn: "1/-1" }}>
+          <Field label="Teléfono">
+            <input value={form.telefono} onChange={e => setForm(f=>({...f, telefono: e.target.value}))} style={inputStyle} placeholder="Ej: 3512345678" />
+          </Field>
+        </div>
+        <div style={{ gridColumn: "1/-1" }}>
+          <Field label="Notas internas">
+            <textarea value={form.notas_internas} onChange={e => setForm(f=>({...f, notas_internas: e.target.value}))} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} placeholder="Notas privadas del equipo..." />
+          </Field>
+        </div>
+      </div>
+
+      {ticket?.id && historial.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Historial</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 180, overflowY: "auto" }}>
+            {historial.map((h, i) => (
+              <div key={i} style={{ background: C.pale, borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>
+                <div style={{ color: C.text, marginBottom: 3 }}>{h.texto}</div>
+                <div style={{ color: C.muted, fontSize: 11 }}>{h.autor} · {new Date(h.fecha).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {ticket?.id && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Agregar nota al historial</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={nota} onChange={e => setNota(e.target.value)} placeholder="Escribí una nota..." style={{ ...inputStyle, flex: 1 }} onKeyDown={e => e.key === "Enter" && agregarNota()} />
+            <button onClick={agregarNota} style={{ ...btnPrimary, padding: "9px 16px", fontSize: 13 }}>Agregar</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <button onClick={onClose} style={{ ...btnSecondary, flex: 1 }}>Cancelar</button>
+        <button onClick={guardar} disabled={saving} style={{ ...btnPrimary, flex: 1 }}>{saving ? "Guardando..." : ticket?.id ? "Guardar cambios" : "Crear ticket"}</button>
+      </div>
+    </Modal>
+  );
+}
+
 function Tickets({ toast }) {
   const [tickets, setTickets] = useState([]);
+  const [socios, setSocios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("todos");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [modalTicket, setModalTicket] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const PER = 15;
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await sb("tickets?select=*,socios(nombre,direccion)&order=created_at.desc");
+    const [data, socs] = await Promise.all([
+      sb("tickets?select=*,socios(nombre,direccion,dni)&order=created_at.desc"),
+      sb("socios?select=id,nombre,dni,estado&order=nombre"),
+    ]);
     setTickets(Array.isArray(data) ? data : []);
+    setSocios(Array.isArray(socs) ? socs : []);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const abrirNuevo = () => { setModalTicket(null); setShowModal(true); };
+  const abrirEditar = (t) => { setModalTicket(t); setShowModal(true); };
 
   const cambiarEstado = async (id, estado) => {
     await sb(`tickets?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
@@ -100,7 +242,7 @@ function Tickets({ toast }) {
   const filtered = tickets.filter(t => {
     const mf = filter === "todos" ? true : filter === "alta" ? t.prioridad === "alta" : t.tipo === filter;
     const q = search.toLowerCase();
-    const ms = !q || t.resumen?.toLowerCase().includes(q) || t.socios?.nombre?.toLowerCase().includes(q);
+    const ms = !q || t.resumen?.toLowerCase().includes(q) || t.socios?.nombre?.toLowerCase().includes(q) || t.asignado_a?.toLowerCase().includes(q);
     return mf && ms;
   });
   const pages = Math.ceil(filtered.length / PER);
@@ -112,7 +254,10 @@ function Tickets({ toast }) {
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Tickets</h2>
-        <button onClick={load} style={{ ...btnSecondary, padding: "7px 14px", fontSize: 13 }}>Actualizar</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={load} style={{ ...btnSecondary, padding: "7px 14px", fontSize: 13 }}>Actualizar</button>
+          <button onClick={abrirNuevo} style={btnPrimary}>+ Nuevo ticket</button>
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px,1fr))", gap: 12, marginBottom: 24 }}>
@@ -137,6 +282,7 @@ function Tickets({ toast }) {
             const tipo = t.tipo || "consulta";
             const [tbg, tc] = tipoBg[tipo] || tipoBg.consulta;
             const fecha = new Date(t.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+            const tieneNotas = t.historial?.length > 0 || t.notas_internas;
             return (
               <div key={t.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: prioDot[t.prioridad] || prioDot.media, flexShrink: 0 }} />
@@ -144,15 +290,20 @@ function Tickets({ toast }) {
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 400 }}>{t.resumen || "(sin resumen)"}</div>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 12, color: C.muted, alignItems: "center" }}>
                     <span style={{ background: tbg, color: tc, borderRadius: 20, padding: "2px 8px", fontWeight: 600 }}>{tipo}</span>
-                    <span>{t.socios?.nombre || "—"}</span>
+                    <span>{t.socios?.nombre || (t.telefono ? `Tel: ${t.telefono}` : "—")}</span>
+                    {t.asignado_a && <span style={{ background: C.light, color: C.dark, borderRadius: 20, padding: "2px 8px", fontWeight: 500 }}>{t.asignado_a}</span>}
+                    {tieneNotas && <span style={{ color: C.green, fontSize: 11, fontWeight: 600 }}>con notas</span>}
                     <span>{fecha}</span>
                   </div>
                 </div>
-                <select value={t.estado || "abierto"} onChange={e => cambiarEstado(t.id, e.target.value)} style={{ ...inputStyle, width: "auto", padding: "6px 10px" }}>
-                  <option value="abierto">Abierto</option>
-                  <option value="en_proceso">En proceso</option>
-                  <option value="cerrado">Cerrado</option>
-                </select>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <select value={t.estado || "abierto"} onChange={e => cambiarEstado(t.id, e.target.value)} style={{ ...inputStyle, width: "auto", padding: "6px 10px" }}>
+                    <option value="abierto">Abierto</option>
+                    <option value="en_proceso">En proceso</option>
+                    <option value="cerrado">Cerrado</option>
+                  </select>
+                  <button onClick={() => abrirEditar(t)} style={{ ...btnSecondary, padding: "6px 14px", fontSize: 12 }}>Ver</button>
+                </div>
               </div>
             );
           })}
@@ -164,6 +315,15 @@ function Tickets({ toast }) {
           <span style={{ fontSize: 13, color: C.muted }}>Página {page} de {pages} · {filtered.length} tickets</span>
           <button onClick={() => setPage(p => Math.min(pages,p+1))} disabled={page===pages} style={{ ...btnSecondary, padding: "5px 12px" }}>›</button>
         </div>
+      )}
+      {showModal && (
+        <TicketModal
+          ticket={modalTicket}
+          socios={socios}
+          onClose={() => setShowModal(false)}
+          onSave={load}
+          toast={toast}
+        />
       )}
     </div>
   );
