@@ -10,8 +10,8 @@ const sb = async (path, opts = {}) => {
     headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", ...opts.headers },
   });
   if (!res.ok) throw new Error(await res.text());
-  if (res.status === 204) return null;
-  return res.json();
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 };
 
 // ─── Admin ───────────────────────────────────────────────────────────
