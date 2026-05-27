@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import Dashboard from "./Dashboard";
 
 // ─── Colores y fuente ───────────────────────────────────────────────
 const C = {
@@ -198,8 +199,8 @@ function Login({ onLogin }) {
   );
 }
 
-// ─── DASHBOARD ───────────────────────────────────────────────────────
-function Dashboard({ onLogout }) {
+// ─── DASHBOARD — ver Dashboard.jsx ───────────────────────────────────
+function _Dashboard_REMOVED({ onLogout }) {
   const isMobile = useIsMobile();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -576,6 +577,7 @@ function Landing() {
   );
 }
 
+// ─── (Dashboard se importa desde Dashboard.jsx) ──────────────────────
 // ─── APP PRINCIPAL ───────────────────────────────────────────────────
 export default function App() {
   const hash = useHash();
