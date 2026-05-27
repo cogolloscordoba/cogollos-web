@@ -48,9 +48,10 @@ function useIsMobile() {
 
 // ─── Hook de ruta por hash ──────────────────────────────────────────
 function useHash() {
-  const [hash, setHash] = useState(window.location.hash);
+  const [hash, setHash] = useState(() => window.location.hash);
   useEffect(() => {
     const h = () => setHash(window.location.hash);
+    h();
     window.addEventListener("hashchange", h);
     return () => window.removeEventListener("hashchange", h);
   }, []);
