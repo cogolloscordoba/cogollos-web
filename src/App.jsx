@@ -29,12 +29,23 @@ const PASOS = [
   { num: "03", titulo: "Vinculación Cannalizar", desc: "El equipo médico te guía para completar tu vinculación en la plataforma Cannalizar. Una vez completado, comenzamos a dispensarte.", link: "https://app.cannalizar.com.ar/invite-patient?&referal=1687099523011x992708761737770400", linkText: "Plataforma Cannalizar" },
 ];
 
+// Hook para detectar mobile
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return isMobile;
+}
+
 async function askClaude(messages) {
   const ultimoMensaje = messages.filter(m => m.role === "user").pop();
   const historial = messages.filter(m => m.role === "user" || m.role === "assistant").slice(0, -1);
-  
+
   console.log("MENSAJE:", ultimoMensaje?.content, "HISTORIAL:", historial.length);
-  
+
   const res = await fetch("https://cogollos.app.n8n.cloud/webhook/chat-web", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -48,6 +59,7 @@ async function askClaude(messages) {
 }
 
 function Chat() {
+  const isMobile = useIsMobile();
   const [msgs, setMsgs] = useState([
     { role: "assistant", content: "Hola, soy Cogo-Bot, el asistente de Cogollos Córdoba. Podés preguntarme sobre nuestras variedades, el proceso de asociación o lo que necesites." }
   ]);
@@ -86,15 +98,15 @@ function Chat() {
         </div>
       </div>
 
-      <div style={{ height: 300, overflowY: "auto", padding: "16px" }}>
+      <div style={{ height: isMobile ? 260 : 300, overflowY: "auto", padding: "16px" }}>
         {msgs.map((m, i) => (
           <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 12 }}>
             <div style={{
-              maxWidth: "80%", padding: "10px 14px",
+              maxWidth: "85%", padding: "10px 14px",
               background: m.role === "user" ? C.green : C.greenLight,
               color: m.role === "user" ? "#fff" : C.dark,
               borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-              fontSize: 14, lineHeight: 1.6, fontFamily: F,
+              fontSize: isMobile ? 13 : 14, lineHeight: 1.6, fontFamily: F,
               whiteSpace: "pre-wrap",
             }}>{m.content}</div>
           </div>
@@ -137,6 +149,7 @@ function Chat() {
           background: !input.trim() ? C.border : C.green,
           cursor: !input.trim() ? "not-allowed" : "pointer",
           color: "#fff", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
         }}>→</button>
       </div>
     </div>
@@ -144,7 +157,12 @@ function Chat() {
 }
 
 export default function App() {
-  const scrollTo = id => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const scrollTo = id => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    setMenuOpen(false);
+  };
 
   return (
     <div style={{ fontFamily: F, color: C.dark, background: C.cream }}>
@@ -162,33 +180,84 @@ export default function App() {
       {/* NAV */}
       <nav style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        background: "rgba(250,253,248,0.95)", backdropFilter: "blur(10px)",
+        background: "rgba(250,253,248,0.97)", backdropFilter: "blur(10px)",
         borderBottom: `1px solid ${C.border}`,
-        padding: "0 6%", display: "flex", alignItems: "center", height: 68,
+        padding: `0 ${isMobile ? "4%" : "6%"}`,
+        display: "flex", alignItems: "center", height: 64,
       }}>
-        <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 44, cursor: "pointer" }} onClick={() => scrollTo("inicio")} />
-        <div style={{ marginLeft: "auto", display: "flex", gap: 28, alignItems: "center" }}>
-          {[["Nosotros", "nosotros"], ["Variedades", "catalogo"], ["Asociarse", "asociarse"]].map(([l, id]) => (
+        <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: isMobile ? 36 : 44, cursor: "pointer" }} onClick={() => scrollTo("inicio")} />
+
+        {isMobile ? (
+          // Hamburger menu
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}
+          >
+            {[0,1,2].map(i => (
+              <div key={i} style={{ width: 24, height: 2, background: C.dark, borderRadius: 2,
+                transition: "all 0.2s",
+                transform: menuOpen
+                  ? i === 0 ? "rotate(45deg) translate(5px, 5px)"
+                  : i === 1 ? "opacity:0"
+                  : "rotate(-45deg) translate(5px, -5px)"
+                  : "none",
+                opacity: menuOpen && i === 1 ? 0 : 1,
+              }} />
+            ))}
+          </button>
+        ) : (
+          <div style={{ marginLeft: "auto", display: "flex", gap: 28, alignItems: "center" }}>
+            {[["Nosotros", "nosotros"], ["Variedades", "catalogo"], ["Asociarse", "asociarse"]].map(([l, id]) => (
+              <button key={id} onClick={() => scrollTo(id)} style={{
+                background: "none", border: "none", color: C.body, cursor: "pointer",
+                fontSize: 15, fontFamily: F, fontWeight: 500,
+              }}>{l}</button>
+            ))}
+            <button onClick={() => scrollTo("asociarse")} style={{
+              background: C.green, color: "#fff", border: "none",
+              borderRadius: 8, padding: "10px 22px", cursor: "pointer",
+              fontFamily: F, fontWeight: 700, fontSize: 14,
+            }}>Quiero asociarme</button>
+          </div>
+        )}
+      </nav>
+
+      {/* MOBILE MENU DROPDOWN */}
+      {isMobile && menuOpen && (
+        <div style={{
+          position: "fixed", top: 64, left: 0, right: 0, zIndex: 99,
+          background: C.white, borderBottom: `1px solid ${C.border}`,
+          padding: "16px 6%", display: "flex", flexDirection: "column", gap: 4,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+        }}>
+          {[["Nosotros", "nosotros"], ["Variedades", "catalogo"], ["Asociarse", "asociarse"], ["Consultar", "consultar"]].map(([l, id]) => (
             <button key={id} onClick={() => scrollTo(id)} style={{
               background: "none", border: "none", color: C.body, cursor: "pointer",
-              fontSize: 15, fontFamily: F, fontWeight: 500,
+              fontSize: 16, fontFamily: F, fontWeight: 500, padding: "12px 0",
+              textAlign: "left", borderBottom: `1px solid ${C.border}`,
             }}>{l}</button>
           ))}
           <button onClick={() => scrollTo("asociarse")} style={{
             background: C.green, color: "#fff", border: "none",
-            borderRadius: 8, padding: "10px 22px", cursor: "pointer",
-            fontFamily: F, fontWeight: 700, fontSize: 14,
+            borderRadius: 8, padding: "14px", cursor: "pointer",
+            fontFamily: F, fontWeight: 700, fontSize: 15, marginTop: 8,
           }}>Quiero asociarme</button>
         </div>
-      </nav>
+      )}
 
       {/* HERO */}
       <section id="inicio" style={{
         minHeight: "100vh", display: "flex", alignItems: "center",
-        padding: "100px 6% 80px",
+        padding: isMobile ? "90px 6% 60px" : "100px 6% 80px",
         background: `linear-gradient(160deg, ${C.white} 50%, ${C.greenLight} 100%)`,
       }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", width: "100%", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
+        <div style={{
+          maxWidth: 1100, margin: "0 auto", width: "100%",
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+          gap: isMobile ? 40 : 60,
+          alignItems: "center",
+        }}>
           <div>
             <div style={{
               display: "inline-block", background: C.greenLight, color: C.greenDark,
@@ -196,61 +265,66 @@ export default function App() {
               letterSpacing: "0.08em", marginBottom: 28,
             }}>ASOCIACIÓN CIVIL · RES. IPJ 207 C/21</div>
 
-            <h1 style={{ fontSize: "clamp(34px, 4.5vw, 54px)", fontWeight: 700, lineHeight: 1.15, color: C.dark, marginBottom: 20 }}>
+            <h1 style={{ fontSize: isMobile ? "clamp(30px, 8vw, 42px)" : "clamp(34px, 4.5vw, 54px)", fontWeight: 700, lineHeight: 1.15, color: C.dark, marginBottom: 20 }}>
               Cannabis medicinal<br />
               <span style={{ color: C.green }}>legal y de calidad</span><br />
               en Córdoba
             </h1>
 
-            <p style={{ color: C.body, fontSize: 17, lineHeight: 1.75, marginBottom: 36, maxWidth: 480 }}>
+            <p style={{ color: C.body, fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 36, maxWidth: 480 }}>
               Somos una ONG habilitada por REPROCANN para cultivar por vos de manera legal. Fundada en 2001, somos la primera asociación cannábica de Argentina.
             </p>
 
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
               <button onClick={() => scrollTo("asociarse")} style={{
                 background: C.green, color: "#fff", border: "none",
-                borderRadius: 8, padding: "14px 28px",
-                fontFamily: F, fontWeight: 700, fontSize: 15, cursor: "pointer",
+                borderRadius: 8, padding: isMobile ? "13px 22px" : "14px 28px",
+                fontFamily: F, fontWeight: 700, fontSize: isMobile ? 14 : 15, cursor: "pointer",
                 boxShadow: `0 4px 16px ${C.green}40`,
+                width: isMobile ? "100%" : "auto",
               }}>Quiero asociarme</button>
               <button onClick={() => scrollTo("consultar")} style={{
                 background: "transparent", color: C.green,
                 border: `2px solid ${C.green}`,
-                borderRadius: 8, padding: "14px 28px",
-                fontFamily: F, fontWeight: 700, fontSize: 15, cursor: "pointer",
+                borderRadius: 8, padding: isMobile ? "13px 22px" : "14px 28px",
+                fontFamily: F, fontWeight: 700, fontSize: isMobile ? 14 : 15, cursor: "pointer",
+                width: isMobile ? "100%" : "auto",
               }}>Hacer una consulta</button>
             </div>
 
-            <div style={{ display: "flex", gap: 40 }}>
+            <div style={{ display: "flex", gap: isMobile ? 24 : 40, flexWrap: "wrap" }}>
               {[["2001", "Fundación"], ["Desde REPROCANN", "Habilitados para cultivar"], ["5", "Variedades propias"]].map(([n, l]) => (
                 <div key={l}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: C.green }}>{n}</div>
+                  <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: C.green }}>{n}</div>
                   <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{l}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-            <img src="/logo.png" alt="Cogollos Córdoba" style={{ maxWidth: 380, width: "100%" }} />
-          </div>
+          {/* Logo — oculto en mobile para no ocupar espacio */}
+          {!isMobile && (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+              <img src="/logo.png" alt="Cogollos Córdoba" style={{ maxWidth: 380, width: "100%" }} />
+            </div>
+          )}
         </div>
       </section>
 
       {/* NOSOTROS */}
-      <section id="nosotros" style={{ padding: "100px 6%", background: C.white }}>
+      <section id="nosotros" style={{ padding: isMobile ? "70px 6%" : "100px 6%", background: C.white }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ maxWidth: 680, marginBottom: 56 }}>
+          <div style={{ maxWidth: 680, marginBottom: 48 }}>
             <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>QUIÉNES SOMOS</div>
-            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 700, color: C.dark, marginBottom: 20, lineHeight: 1.2 }}>
+            <h2 style={{ fontSize: "clamp(24px, 3.5vw, 40px)", fontWeight: 700, color: C.dark, marginBottom: 20, lineHeight: 1.2 }}>
               La primera asociación cannábica de Argentina
             </h2>
-            <p style={{ color: C.body, fontSize: 16, lineHeight: 1.8 }}>
+            <p style={{ color: C.body, fontSize: isMobile ? 14 : 16, lineHeight: 1.8 }}>
               Cogollos Córdoba fue fundada en 2001 por cultivadores, cultivadoras y activistas para visibilizarse y trabajar por la despenalización del cannabis y el reconocimiento de sus usos terapéuticos. Desde la vigencia de la ley REPROCANN, somos una ONG habilitada para cultivar cannabis medicinal por nuestros socios.
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
             {[
               { titulo: "Edith 'La Negra' Moreno", texto: "Pionera en la lucha por los derechos de personas con VIH y el uso terapéutico del cannabis. Fue el motor fundacional de Cogollos Córdoba y la primera asociación cannábica de Argentina." },
               { titulo: "Investigación con INTA", texto: "Trabajamos junto al Instituto Nacional de Tecnología Agropecuaria en un proceso de fitomejoramiento genético para elevar el estándar de calidad de nuestras cepas." },
@@ -270,24 +344,24 @@ export default function App() {
       </section>
 
       {/* CATÁLOGO */}
-      <section id="catalogo" style={{ padding: "100px 6%", background: C.cream }}>
+      <section id="catalogo" style={{ padding: isMobile ? "70px 6%" : "100px 6%", background: C.cream }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ marginBottom: 56 }}>
+          <div style={{ marginBottom: 48 }}>
             <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>NUESTRAS VARIEDADES</div>
-            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 700, color: C.dark, marginBottom: 12, lineHeight: 1.2 }}>
+            <h2 style={{ fontSize: "clamp(24px, 3.5vw, 40px)", fontWeight: 700, color: C.dark, marginBottom: 12, lineHeight: 1.2 }}>
               Flor seca de calidad premium
             </h2>
-            <p style={{ color: C.muted, fontSize: 15 }}>Paquetes cerrados de 5g · <strong style={{ color: C.green }}>$30.000 c/u</strong> · Exclusivo para socios activos</p>
+            <p style={{ color: C.muted, fontSize: isMobile ? 13 : 15 }}>Paquetes cerrados de 5g · <strong style={{ color: C.green }}>$30.000 c/u</strong> · Exclusivo para socios activos</p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
             {VARIEDADES.map(v => (
               <div key={v.nombre} style={{
                 background: v.bg, borderRadius: 12,
                 padding: "24px 20px", border: `1px solid ${v.accent}22`,
                 transition: "transform 0.2s, box-shadow 0.2s",
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.08)"; }}
+              onMouseEnter={e => { if (!isMobile) { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.08)"; }}}
               onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
@@ -316,15 +390,15 @@ export default function App() {
       </section>
 
       {/* ASOCIARSE */}
-      <section id="asociarse" style={{ padding: "100px 6%", background: C.greenDark }}>
+      <section id="asociarse" style={{ padding: isMobile ? "70px 6%" : "100px 6%", background: C.greenDark }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ marginBottom: 56 }}>
+          <div style={{ marginBottom: isMobile ? 36 : 56 }}>
             <div style={{ color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>PROCESO DE VINCULACIÓN</div>
-            <h2 style={{ fontSize: "clamp(26px, 3.5vw, 40px)", fontWeight: 700, color: "#fff", marginBottom: 16, lineHeight: 1.2 }}>Como asociarme</h2>
-            <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 16, maxWidth: 520 }}>El proceso completo lleva entre 1 y 2 semanas. Te acompañamos en cada paso.</p>
+            <h2 style={{ fontSize: "clamp(24px, 3.5vw, 40px)", fontWeight: 700, color: "#fff", marginBottom: 16, lineHeight: 1.2 }}>Como asociarme</h2>
+            <p style={{ color: "rgba(255,255,255,0.65)", fontSize: isMobile ? 14 : 16, maxWidth: 520 }}>El proceso completo lleva entre 1 y 2 semanas. Te acompañamos en cada paso.</p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 32 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 32 }}>
             {PASOS.map((paso, i) => (
               <div key={i} style={{
                 background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
@@ -344,9 +418,11 @@ export default function App() {
           <div style={{
             background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
             borderRadius: 12, padding: "24px 28px",
-            display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap",
+            display: "flex", alignItems: isMobile ? "flex-start" : "center",
+            flexDirection: isMobile ? "column" : "row",
+            gap: isMobile ? 16 : 20,
           }}>
-            <div style={{ flex: 1, minWidth: 240 }}>
+            <div style={{ flex: 1, minWidth: isMobile ? "auto" : 240 }}>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Ya sos paciente REPROCANN activo?</div>
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 14 }}>
                 Tenemos caminos especiales: convenio bilateral o baja y nuevo registro. En ambos casos hay consulta médica con nuestro director.
@@ -355,22 +431,28 @@ export default function App() {
             <button onClick={() => scrollTo("consultar")} style={{
               background: "#6FD67F", color: C.dark, border: "none",
               borderRadius: 8, padding: "12px 24px",
-              fontFamily: F, fontWeight: 700, fontSize: 14, cursor: "pointer", flexShrink: 0,
+              fontFamily: F, fontWeight: 700, fontSize: 14, cursor: "pointer",
+              flexShrink: 0, width: isMobile ? "100%" : "auto",
             }}>Consultar</button>
           </div>
         </div>
       </section>
 
       {/* CONSULTAR */}
-      <section id="consultar" style={{ padding: "100px 6%", background: C.white }}>
+      <section id="consultar" style={{ padding: isMobile ? "70px 6%" : "100px 6%", background: C.white }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            gap: isMobile ? 40 : 60,
+            alignItems: "center",
+          }}>
             <div>
               <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>COGO-BOT</div>
-              <h2 style={{ fontSize: "clamp(26px, 3.5vw, 38px)", fontWeight: 700, color: C.dark, marginBottom: 20, lineHeight: 1.2 }}>
+              <h2 style={{ fontSize: "clamp(24px, 3.5vw, 38px)", fontWeight: 700, color: C.dark, marginBottom: 20, lineHeight: 1.2 }}>
                 Consulta sin compromiso
               </h2>
-              <p style={{ color: C.body, fontSize: 16, lineHeight: 1.75, marginBottom: 28 }}>
+              <p style={{ color: C.body, fontSize: isMobile ? 14 : 16, lineHeight: 1.75, marginBottom: 28 }}>
                 Cogo-Bot puede responder tus dudas sobre el proceso de asociación, las variedades, la consulta médica y todo lo que necesites saber.
               </p>
               {["Proceso de asociación y REPROCANN", "Variedades y efectos de cada una", "Precios y modalidad de entrega", "Consultas sobre la vinculación médica"].map(item => (
@@ -394,9 +476,14 @@ export default function App() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ background: "#000000", padding: "60px 6% 32px" }}>
+      <footer style={{ background: "#000000", padding: isMobile ? "48px 6% 28px" : "60px 6% 32px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 40, marginBottom: 48 }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr",
+            gap: isMobile ? 32 : 40,
+            marginBottom: isMobile ? 32 : 48,
+          }}>
             <div>
               <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 48, marginBottom: 16 }} />
               <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.7, maxWidth: 280, marginBottom: 16 }}>
