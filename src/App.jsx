@@ -17,6 +17,8 @@ const sb = async (path, opts = {}) => {
 // ─── Admin ───────────────────────────────────────────────────────────
 const ADMIN_USER = "C0g026IPJ";
 const ADMIN_PASS = "789996g!!#";
+const MEDICA_USER = "Medi26IPJ";
+const MEDICA_PASS = "789996g!!#";
 
 // ─── Colores ─────────────────────────────────────────────────────────
 const C = {
@@ -676,8 +678,8 @@ function Landing() {
           </button>
         ) : (
           <div style={{ marginLeft: "auto", display: "flex", gap: 24, alignItems: "center" }}>
-            {[["Nosotros","nosotros"],["Cómo funciona","como-funciona"],["Asociarse","asociarse"]].map(([l,id]) => (
-              <button key={id} onClick={() => scrollTo(id)} style={{ background: "none", border: "none", color: C.body, cursor: "pointer", fontSize: 15, fontFamily: F, fontWeight: 500 }}>{l}</button>
+            {[["Nosotros","nosotros"],["Cómo funciona","como-funciona"],["Asociarse","asociarse"],["Autocultivo","#/autocultivo"]].map(([l,id]) => (
+              <button key={id} onClick={() => id.startsWith("#") ? window.location.hash = id : scrollTo(id)} style={{ background: "none", border: "none", color: C.body, cursor: "pointer", fontSize: 15, fontFamily: F, fontWeight: 500 }}>{l}</button>
             ))}
             <button onClick={() => window.location.hash = "#/socios"} style={{ background: C.dark, color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontFamily: F, fontWeight: 700, fontSize: 14 }}>Acceder como socio</button>
           </div>
@@ -824,9 +826,323 @@ function Landing() {
           </div>
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
             <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>© 2026 Asociación Civil Cogollos Córdoba</span>
-            <button onClick={() => window.location.hash = "#/admin"} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: 11, fontFamily: F }}>Acceso equipo</button>
+            <div style={{ display: "flex", gap: 16 }}>
+              <button onClick={() => window.location.hash = "#/medica"} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: 11, fontFamily: F }}>Portal médico</button>
+              <button onClick={() => window.location.hash = "#/admin"} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: 11, fontFamily: F }}>Acceso equipo</button>
+            </div>
           </div>
         </div>
+      </footer>
+    </div>
+  );
+}
+
+// ─── PORTAL MÉDICO ───────────────────────────────────────────────────
+function LoginMedica({ onLogin }) {
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 300));
+    if (user === MEDICA_USER && pass === MEDICA_PASS) {
+      sessionStorage.setItem("cogo_medica", "1");
+      onLogin();
+    } else {
+      setError("Credenciales incorrectas");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, fontFamily: F, padding: "0 6%" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 56, marginBottom: 16 }} />
+          <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, letterSpacing: "0.1em" }}>PORTAL MÉDICO</div>
+        </div>
+        <div style={{ background: C.white, borderRadius: 16, border: `1.5px solid ${C.border}`, padding: "36px 32px" }}>
+          <form onSubmit={handleLogin}>
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Usuario</label>
+              <input value={user} onChange={e => setUser(e.target.value)} autoFocus style={inputStyle} />
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Contraseña</label>
+              <input type="password" value={pass} onChange={e => setPass(e.target.value)} style={inputStyle} />
+            </div>
+            {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", color: "#991B1B", fontSize: 13, marginBottom: 20 }}>{error}</div>}
+            <button type="submit" disabled={loading} style={{ ...btnGreen, width: "100%", padding: 14 }}>{loading ? "Ingresando..." : "Ingresar"}</button>
+          </form>
+        </div>
+        <p style={{ textAlign: "center", marginTop: 20 }}>
+          <button onClick={() => { window.location.hash = ""; }} style={{ background: "none", border: "none", color: C.green, cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 500 }}>← Volver al sitio</button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PortalMedico({ onLogout }) {
+  const isMobile = useIsMobile();
+  const [socios, setSocios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filtro, setFiltro] = useState("pendientes");
+  const [search, setSearch] = useState("");
+  const [editando, setEditando] = useState(null);
+  const [form, setForm] = useState({ fecha_consulta: "", notas_medicas: "", consulta_realizada: false });
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState("");
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
+
+  const load = async () => {
+    setLoading(true);
+    const data = await sb("socios?select=*&order=created_at.desc");
+    setSocios(Array.isArray(data) ? data : []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const abrirEditar = (s) => {
+    setEditando(s);
+    setForm({
+      fecha_consulta: s.fecha_consulta || "",
+      notas_medicas: s.notas_medicas || "",
+      consulta_realizada: s.consulta_realizada || false,
+    });
+  };
+
+  const guardar = async () => {
+    setSaving(true);
+    await sb(`socios?id=eq.${editando.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        ...form,
+        fecha_consulta: form.fecha_consulta || null,
+        // Si marcó consulta realizada, pasa a estado activo automáticamente
+        estado: form.consulta_realizada ? "activo" : editando.estado,
+      }),
+    });
+    setSocios(ss => ss.map(s => s.id === editando.id ? {
+      ...s, ...form,
+      estado: form.consulta_realizada ? "activo" : s.estado
+    } : s));
+    showToast(form.consulta_realizada ? "Consulta registrada — socio activado" : "Notas guardadas");
+    setEditando(null);
+    setSaving(false);
+  };
+
+  const filtrados = socios.filter(s => {
+    const matchFiltro = filtro === "todos" ? true : filtro === "pendientes" ? s.estado === "pendiente" && !s.consulta_realizada : filtro === "con_consulta" ? s.consulta_realizada : s.estado === "activo";
+    const q = search.toLowerCase();
+    const matchSearch = !q || s.nombre?.toLowerCase().includes(q) || s.dni?.includes(q);
+    return matchFiltro && matchSearch;
+  });
+
+  const stats = {
+    pendientes: socios.filter(s => s.estado === "pendiente" && !s.consulta_realizada).length,
+    con_consulta: socios.filter(s => s.consulta_realizada).length,
+    activos: socios.filter(s => s.estado === "activo").length,
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.pale, fontFamily: F }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } input, select, textarea { font-family: inherit; }`}</style>
+
+      <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 60, position: "sticky", top: 0, zIndex: 50 }}>
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30, filter: "brightness(0) invert(1)" }} />
+        <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginLeft: 12 }}>Portal médico</span>
+        <button onClick={onLogout} style={{ marginLeft: "auto", background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>Salir</button>
+      </div>
+
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 4%" : "32px 6%" }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 24 }}>Agenda de consultas</h2>
+
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 28 }}>
+          {[
+            ["Sin consulta", stats.pendientes, "#991B1B"],
+            ["Con consulta", stats.con_consulta, "#8C6B1A"],
+            ["Activados", stats.activos, C.green],
+          ].map(([l,v,c]) => (
+            <div key={l} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 18px" }}>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{l}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: c }}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filtros */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+          {[["pendientes","Sin consulta"],["con_consulta","Con consulta"],["activos","Activados"],["todos","Todos"]].map(([v,l]) => (
+            <button key={v} onClick={() => setFiltro(v)} style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: filtro===v?"none":`1px solid ${C.border}`, background: filtro===v?C.dark:C.white, color: filtro===v?"#fff":C.muted, fontFamily: F }}>{l}</button>
+          ))}
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre o DNI..." style={{ ...inputStyle, width: 200, marginLeft: "auto", fontSize: 13, padding: "8px 12px" }} />
+        </div>
+
+        {/* Lista */}
+        {loading ? <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Cargando...</div> : filtrados.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Sin resultados</div> : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {filtrados.map(s => (
+              <div key={s.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: s.consulta_realizada ? C.light : "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: s.consulta_realizada ? C.dark : "#991B1B", flexShrink: 0 }}>
+                  {s.nombre?.charAt(0) || "?"}
+                </div>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>{s.nombre}</div>
+                  <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <span>DNI {s.dni}</span>
+                    {s.telefono && <span>{s.telefono}</span>}
+                    {s.fecha_consulta && <span>Consulta: {new Date(s.fecha_consulta).toLocaleDateString("es-AR")}</span>}
+                    {s.notas && <span style={{ color: C.body, fontStyle: "italic" }}>{s.notas.slice(0, 60)}{s.notas.length > 60 ? "..." : ""}</span>}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: s.consulta_realizada ? C.light : s.estado === "pendiente" ? "#FAEEDA" : "#EAF3DE", color: s.consulta_realizada ? C.dark : s.estado === "pendiente" ? "#633806" : "#27500A" }}>
+                    {s.consulta_realizada ? "Consulta realizada" : s.estado}
+                  </span>
+                  <button onClick={() => abrirEditar(s)} style={{ ...btnGreen, padding: "6px 14px", fontSize: 12 }}>Registrar</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal editar */}
+      {editando && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}>
+            <div style={{ padding: "20px 24px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.border}` }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{editando.nombre}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>DNI {editando.dni} · {editando.telefono}</div>
+              </div>
+              <button onClick={() => setEditando(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: C.muted }}>×</button>
+            </div>
+            <div style={{ padding: 24 }}>
+              {editando.notas && (
+                <div style={{ background: C.pale, borderRadius: 8, padding: "12px 14px", marginBottom: 20, fontSize: 13, color: C.body, lineHeight: 1.6 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Nota del socio</div>
+                  {editando.notas}
+                </div>
+              )}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Fecha de consulta</label>
+                <input type="date" value={form.fecha_consulta} onChange={e => setForm(f => ({...f, fecha_consulta: e.target.value}))} style={inputStyle} />
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Notas médicas</label>
+                <textarea value={form.notas_medicas} onChange={e => setForm(f => ({...f, notas_medicas: e.target.value}))} style={{ ...inputStyle, minHeight: 90, resize: "vertical" }} placeholder="Observaciones de la consulta..." />
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 24, padding: "14px 16px", background: form.consulta_realizada ? C.light : C.pale, borderRadius: 10, border: `1.5px solid ${form.consulta_realizada ? C.green : C.border}` }}>
+                <input type="checkbox" checked={form.consulta_realizada} onChange={e => setForm(f => ({...f, consulta_realizada: e.target.checked}))} style={{ width: 18, height: 18, accentColor: C.dark }} />
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Marcar consulta como realizada</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Activa automáticamente al socio para que pueda retirar</div>
+                </div>
+              </label>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setEditando(null)} style={{ flex: 1, background: "transparent", color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 13, fontSize: 14, cursor: "pointer", fontFamily: F }}>Cancelar</button>
+                <button onClick={guardar} disabled={saving} style={{ ...btnGreen, flex: 2, padding: 13 }}>{saving ? "Guardando..." : "Guardar"}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && <div style={{ position: "fixed", bottom: 24, right: 24, background: C.dark, color: "#fff", padding: "10px 20px", borderRadius: 10, fontSize: 13, fontFamily: F, zIndex: 9999 }}>{toast}</div>}
+    </div>
+  );
+}
+
+// ─── AUTOCULTIVO ─────────────────────────────────────────────────────
+function Autocultivo() {
+  const isMobile = useIsMobile();
+
+  const pasos = [
+    { num: "01", titulo: "Registrate en REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente y tipo de cultivo Autocultivo. Completá tus datos y guardá tu código de vinculación.", link: "https://reprocann.msal.gob.ar/", linkText: "Ir a REPROCANN" },
+    { num: "02", titulo: "Consulta con un médico", desc: "REPROCANN requiere que un médico avale tu solicitud. Podés agendar una consulta virtual con nuestro director médico para obtener el aval necesario, sin necesidad de asociarte a Cogollos.", link: "https://forms.gle/5USo1C2WcBGeG9Qz5", linkText: "Agendar consulta médica" },
+    { num: "03", titulo: "Presentá la documentación", desc: "Con el aval médico completás tu registro en REPROCANN. Una vez aprobado, tenés habilitación legal para cultivar hasta 9 plantas de cannabis para uso personal." },
+    { num: "04", titulo: "Empezá a cultivar", desc: "Con tu REPROCANN aprobado podés cultivar de forma legal en tu domicilio. Si en algún momento querés sumarte a nuestra asociación para acceder a flor seca de calidad, las puertas están abiertas." },
+  ];
+
+  const faqs = [
+    { q: "¿Cuántas plantas puedo tener?", r: "Con REPROCANN como autocultivador podés tener hasta 9 plantas de cannabis." },
+    { q: "¿Necesito ser médico para registrarme?", r: "No, pero sí necesitás el aval de un médico que certifique tu uso terapéutico." },
+    { q: "¿Puedo hacer autocultivo y también ser socio de Cogollos?", r: "Sí, pero en ese caso tu REPROCANN se vincula a nuestra ONG como cultivador colectivo, no como autocultivador individual. Son dos modalidades distintas." },
+    { q: "¿Qué pasa si ya tengo REPROCANN como autocultivador y quiero asociarme?", r: "Hay dos caminos: convenio bilateral entre tu registro y nuestra ONG, o dar de baja el autocultivo y reiniciar vinculado a Cogollos. En ambos casos necesitás una consulta médica con nuestro director." },
+  ];
+
+  return (
+    <div style={{ fontFamily: F, color: C.text, background: C.cream }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } html { scroll-behavior: smooth; }`}</style>
+
+      <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30, filter: "brightness(0) invert(1)", cursor: "pointer" }} onClick={() => window.location.hash = ""} />
+        <button onClick={() => window.location.hash = ""} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>← Inicio</button>
+      </div>
+
+      {/* Hero */}
+      <div style={{ background: `linear-gradient(160deg, ${C.dark} 0%, #2B7A3E 100%)`, padding: isMobile ? "60px 6% 50px" : "80px 6% 70px" }}>
+        <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
+          <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 24 }}>GUÍA DE AUTOCULTIVO</div>
+          <h1 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>Cultivá tu cannabis de forma legal</h1>
+          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 32 }}>Si querés cultivar para uso personal, REPROCANN te da el marco legal para hacerlo. Te explicamos el proceso paso a paso.</p>
+          <a href="https://forms.gle/5USo1C2WcBGeG9Qz5" target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Agendar consulta médica</a>
+        </div>
+      </div>
+
+      {/* Pasos */}
+      <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.white }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: C.text, marginBottom: 40, textAlign: "center" }}>Paso a paso</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {pasos.map((p, i) => (
+              <div key={i} style={{ display: "flex", gap: 24, alignItems: "flex-start", padding: "28px 28px", background: C.pale, borderRadius: 14, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 32, fontWeight: 700, color: C.border, lineHeight: 1, flexShrink: 0, minWidth: 48 }}>{p.num}</div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 8 }}>{p.titulo}</h3>
+                  <p style={{ color: C.body, fontSize: 14, lineHeight: 1.7, marginBottom: p.link ? 14 : 0 }}>{p.desc}</p>
+                  {p.link && <a href={p.link} target="_blank" rel="noreferrer" style={{ color: C.green, fontWeight: 700, fontSize: 13 }}>{p.linkText} →</a>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* FAQs */}
+      <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.pale }}>
+        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+          <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: C.text, marginBottom: 36, textAlign: "center" }}>Preguntas frecuentes</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {faqs.map((f, i) => (
+              <div key={i} style={{ background: C.white, borderRadius: 12, padding: "20px 24px", border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 8 }}>{f.q}</div>
+                <div style={{ fontSize: 14, color: C.body, lineHeight: 1.7 }}>{f.r}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.dark, textAlign: "center" }}>
+        <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: "#fff", marginBottom: 16 }}>¿Preferís no cultivar vos mismo?</h2>
+        <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, marginBottom: 32, maxWidth: 480, margin: "0 auto 32px" }}>Como socio de Cogollos, nosotros cultivamos por vos. Retirás tu flor seca sin preocuparte por el cultivo.</p>
+        <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: "#6FD67F", color: C.text, border: "none", borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Quiero asociarme a Cogollos</button>
+      </div>
+
+      <footer style={{ background: "#000", padding: "24px 6%", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>© 2026 Asociación Civil Cogollos Córdoba</span>
+        <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>WhatsApp: +54 9 3518 05-7172</a>
       </footer>
     </div>
   );
@@ -837,26 +1153,30 @@ export default function App() {
   const hash = useHash();
   const [socio, setSocio] = useState(null);
   const [adminLoggedIn, setAdminLoggedIn] = useState(() => sessionStorage.getItem("cogo_admin") === "1");
+  const [medicaLoggedIn, setMedicaLoggedIn] = useState(() => sessionStorage.getItem("cogo_medica") === "1");
 
   useEffect(() => {
-    document.title = hash.startsWith("#/admin") ? "Panel · Cogollos" : hash === "#/socios" ? "Socios · Cogollos" : "Cogollos Córdoba";
+    const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/medica": "Portal Médico · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos" };
+    document.title = titles[hash] || "Cogollos Córdoba";
   }, [hash]);
 
-  // Admin
   if (hash === "#/admin") {
     if (!adminLoggedIn) return <LoginAdmin onLogin={() => setAdminLoggedIn(true)} />;
     return <Dashboard onLogout={() => { sessionStorage.removeItem("cogo_admin"); setAdminLoggedIn(false); window.location.hash = ""; }} />;
   }
 
-  // Alta
-  if (hash === "#/asociarse") return <FormularioAlta />;
+  if (hash === "#/medica") {
+    if (!medicaLoggedIn) return <LoginMedica onLogin={() => setMedicaLoggedIn(true)} />;
+    return <PortalMedico onLogout={() => { sessionStorage.removeItem("cogo_medica"); setMedicaLoggedIn(false); window.location.hash = ""; }} />;
+  }
 
-  // Zona socios
+  if (hash === "#/asociarse") return <FormularioAlta />;
+  if (hash === "#/autocultivo") return <Autocultivo />;
+
   if (hash === "#/socios") {
     if (!socio) return <LoginSocios onLogin={s => setSocio(s)} />;
     return <ZonaSocios socio={socio} onLogout={() => { setSocio(null); window.location.hash = ""; }} />;
   }
 
-  // Landing
   return <Landing />;
 }
