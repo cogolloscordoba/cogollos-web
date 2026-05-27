@@ -620,7 +620,7 @@ function LoginSocios({ onLogin }) {
           <form onSubmit={verificar}>
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tu DNI</label>
-              <input value={dni} onChange={e => setDni(e.target.value)} placeholder="Ej: 36235710" autoFocus style={{ ...inputStyle, fontSize: 18, letterSpacing: "0.05em" }} />
+              <input value={dni} onChange={e => setDni(e.target.value)} placeholder="Ej: 25666777" autoFocus style={{ ...inputStyle, fontSize: 18, letterSpacing: "0.05em" }} />
             </div>
             {error && (
               <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "12px 16px", color: "#991B1B", fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>
