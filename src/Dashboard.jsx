@@ -836,50 +836,61 @@ function Productos({ toast }) {
   );
 }
 
-// ── DASHBOARD PRINCIPAL ──────────────────────────────────────────────
 // ── FACTURACIÓN ───────────────────────────────────────────────────────
 function Facturacion({ toast }) {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState("mes");
   const [metodoPago, setMetodoPago] = useState("todos");
+  const [vistaFiltro, setVistaFiltro] = useState("todos");
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await sb("pedidos?select=*,socios(nombre,dni),productos(nombre)&order=created_at.desc");
+    const data = await sb("pedidos?select=*,socios(nombre,dni,cuit),productos(nombre)&order=created_at.desc");
     setPedidos(Array.isArray(data) ? data : []);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const marcarPagado = async (id, pagado) => {
+  const marcarCobrado = async (id, pagado) => {
     await sb(`pedidos?id=eq.${id}`, {
       method: "PATCH",
       body: JSON.stringify({ pagado, fecha_pago: pagado ? new Date().toISOString() : null }),
     });
     setPedidos(ps => ps.map(p => p.id === id ? { ...p, pagado, fecha_pago: pagado ? new Date().toISOString() : null } : p));
-    toast(pagado ? "Marcado como pagado" : "Marcado como pendiente de pago");
+    toast(pagado ? "Marcado como cobrado" : "Marcado como sin cobrar");
+  };
+
+  const marcarFacturado = async (id, facturado) => {
+    await sb(`pedidos?id=eq.${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ facturado, fecha_factura: facturado ? new Date().toISOString() : null }),
+    });
+    setPedidos(ps => ps.map(p => p.id === id ? { ...p, facturado, fecha_factura: facturado ? new Date().toISOString() : null } : p));
+    toast(facturado ? "Marcado como facturado" : "Factura revertida");
   };
 
   const exportarCSV = () => {
     const filas = filtrados.map(p => [
       p.numero_orden || "—",
       new Date(p.created_at).toLocaleDateString("es-AR"),
-      p.socios?.nombre || "—",
+      `"${p.socios?.nombre || "—"}"`,
       p.socios?.dni || "—",
-      p.productos?.nombre || "—",
+      p.socios?.cuit || "—",
+      `"${p.productos?.nombre || "—"}"`,
       p.cantidad,
       p.precio_unitario || 0,
       (p.precio_unitario || 0) * p.cantidad,
       p.metodo_pago,
       p.estado,
-      p.pagado ? "Si" : "No",
+      p.pagado ? "Cobrado" : "Sin cobrar",
+      p.facturado ? "Facturado" : "Pendiente",
       p.turno_delivery,
     ]);
-    const headers = ["N° Orden","Fecha","Socio","DNI","Producto","Cant.","Precio Unit.","Total","Método Pago","Estado","Pagado","Turno"];
+    const headers = ["N° Orden","Fecha","Nombre","DNI","CUIT","Producto","Cant.","Precio Unit.","Total","Método Pago","Estado entrega","Cobro","Factura","Turno"];
     const csv = [headers, ...filas].map(r => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -895,36 +906,30 @@ function Facturacion({ toast }) {
     if (periodo === "mes") return fecha.getMonth() === ahora.getMonth() && fecha.getFullYear() === ahora.getFullYear();
     return true;
   });
+  const filtradosMetodo = metodoPago === "todos" ? filtradosPeriodo : filtradosPeriodo.filter(p => p.metodo_pago === metodoPago);
+  const filtrados = vistaFiltro === "sin_cobrar" ? filtradosMetodo.filter(p => !p.pagado)
+    : vistaFiltro === "cobrado" ? filtradosMetodo.filter(p => p.pagado && !p.facturado)
+    : vistaFiltro === "facturado" ? filtradosMetodo.filter(p => p.facturado)
+    : filtradosMetodo;
 
-  const filtrados = metodoPago === "todos" ? filtradosPeriodo : filtradosPeriodo.filter(p => p.metodo_pago === metodoPago);
+  const totalVentas = filtradosMetodo.reduce((s, p) => s + (p.precio_unitario || 0) * p.cantidad, 0);
+  const totalCobrado = filtradosMetodo.filter(p => p.pagado).reduce((s, p) => s + (p.precio_unitario || 0) * p.cantidad, 0);
+  const totalSinCobrar = filtradosMetodo.filter(p => !p.pagado).reduce((s, p) => s + (p.precio_unitario || 0) * p.cantidad, 0);
+  const totalFacturadoEmitido = filtradosMetodo.filter(p => p.facturado).reduce((s, p) => s + (p.precio_unitario || 0) * p.cantidad, 0);
 
-  const totalFacturado = filtrados.reduce((s, p) => s + (p.precio_unitario || 0) * p.cantidad, 0);
-  const totalPagado = filtrados.filter(p => p.pagado).reduce((s, p) => s + (p.precio_unitario || 0) * p.cantidad, 0);
-  const totalPendiente = totalFacturado - totalPagado;
-
-  const porMetodo = filtrados.reduce((acc, p) => {
-    const m = p.metodo_pago || "efectivo";
-    acc[m] = (acc[m] || 0) + (p.precio_unitario || 0) * p.cantidad;
-    return acc;
-  }, {});
-
-  const porTurno = filtrados.reduce((acc, p) => {
-    const t = p.turno_delivery || "sin turno";
-    acc[t] = (acc[t] || 0) + (p.precio_unitario || 0) * p.cantidad;
-    return acc;
-  }, {});
+  const porMetodo = filtradosMetodo.reduce((acc, p) => { const m = p.metodo_pago||"efectivo"; acc[m]=(acc[m]||0)+(p.precio_unitario||0)*p.cantidad; return acc; }, {});
+  const porTurno = filtradosMetodo.reduce((acc, p) => { const t = p.turno_delivery||"sin turno"; acc[t]=(acc[t]||0)+(p.precio_unitario||0)*p.cantidad; return acc; }, {});
 
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Facturación</h2>
-        <button onClick={exportarCSV} style={{ ...btnPrimary, background: C.green }}>Exportar CSV</button>
+        <button onClick={exportarCSV} style={btnPrimary}>Exportar CSV</button>
       </div>
 
-      {/* Filtros */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
         {[["hoy","Hoy"],["semana","Esta semana"],["mes","Este mes"],["todo","Todo"]].map(([v,l]) => (
-          <button key={v} onClick={() => setPeriodo(v)} style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: periodo===v ? "none" : `1px solid ${C.border}`, background: periodo===v ? C.dark : C.white, color: periodo===v ? "#fff" : C.muted, fontFamily: F }}>{l}</button>
+          <button key={v} onClick={() => setPeriodo(v)} style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: periodo===v?"none":`1px solid ${C.border}`, background: periodo===v?C.dark:C.white, color: periodo===v?"#fff":C.muted, fontFamily: F }}>{l}</button>
         ))}
         <select value={metodoPago} onChange={e => setMetodoPago(e.target.value)} style={{ ...inputStyle, width: "auto", marginLeft: "auto" }}>
           <option value="todos">Todos los métodos</option>
@@ -934,29 +939,29 @@ function Facturacion({ toast }) {
         </select>
       </div>
 
-      {/* Stats principales */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px,1fr))", gap: 12, marginBottom: 24 }}>
+      {/* Flujo: Ventas → Sin cobrar → Cobrado → Facturado */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px,1fr))", gap: 12, marginBottom: 24 }}>
         {[
-          ["Total facturado", `$${totalFacturado.toLocaleString("es-AR")}`, C.dark],
-          ["Cobrado", `$${totalPagado.toLocaleString("es-AR")}`, C.green],
-          ["Pendiente de cobro", `$${totalPendiente.toLocaleString("es-AR")}`, "#991B1B"],
-          ["Pedidos", filtrados.length, C.text],
-        ].map(([l,v,c]) => (
+          ["Total ventas", `$${totalVentas.toLocaleString("es-AR")}`, C.text, `${filtradosMetodo.length} pedidos`],
+          ["Sin cobrar", `$${totalSinCobrar.toLocaleString("es-AR")}`, "#991B1B", `${filtradosMetodo.filter(p=>!p.pagado).length} pedidos`],
+          ["Cobrado", `$${totalCobrado.toLocaleString("es-AR")}`, C.green, `${filtradosMetodo.filter(p=>p.pagado&&!p.facturado).length} a facturar`],
+          ["Facturado", `$${totalFacturadoEmitido.toLocaleString("es-AR")}`, "#0C447C", `${filtradosMetodo.filter(p=>p.facturado).length} comprobantes`],
+        ].map(([l,v,c,sub]) => (
           <div key={l} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px" }}>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{l}</div>
-            <div style={{ fontSize: typeof v === "number" ? 26 : 20, fontWeight: 700, color: c }}>{v}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: c, marginBottom: 4 }}>{v}</div>
+            <div style={{ fontSize: 11, color: C.muted }}>{sub}</div>
           </div>
         ))}
       </div>
 
-      {/* Por método y por turno */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
         <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Por método de pago</div>
           {Object.entries(porMetodo).length === 0 ? <div style={{ color: C.muted, fontSize: 13 }}>Sin datos</div> : Object.entries(porMetodo).map(([m,v]) => (
             <div key={m} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13 }}>
               <span style={{ color: C.muted, textTransform: "capitalize" }}>{m}</span>
-              <span style={{ fontWeight: 700, color: C.text }}>${v.toLocaleString("es-AR")}</span>
+              <span style={{ fontWeight: 700 }}>${v.toLocaleString("es-AR")}</span>
             </div>
           ))}
         </div>
@@ -965,47 +970,152 @@ function Facturacion({ toast }) {
           {Object.entries(porTurno).length === 0 ? <div style={{ color: C.muted, fontSize: 13 }}>Sin datos</div> : Object.entries(porTurno).map(([t,v]) => (
             <div key={t} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13 }}>
               <span style={{ color: C.muted, textTransform: "capitalize" }}>{t}</span>
-              <span style={{ fontWeight: 700, color: C.text }}>${v.toLocaleString("es-AR")}</span>
+              <span style={{ fontWeight: 700 }}>${v.toLocaleString("es-AR")}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Lista de pedidos */}
+      {/* Lista con filtro por estado de cobro/factura */}
       <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Detalle de pedidos ({filtrados.length})</div>
-          <div style={{ fontSize: 12, color: C.muted }}>{filtrados.filter(p=>p.pagado).length} pagados · {filtrados.filter(p=>!p.pagado).length} pendientes</div>
+        <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          {[["todos","Todos"],["sin_cobrar","Sin cobrar"],["cobrado","Cobrado — a facturar"],["facturado","Facturados"]].map(([v,l]) => (
+            <button key={v} onClick={() => setVistaFiltro(v)} style={{ padding: "4px 12px", borderRadius: 20, fontSize: 12, cursor: "pointer", border: vistaFiltro===v?"none":`1px solid ${C.border}`, background: vistaFiltro===v?C.dark:"transparent", color: vistaFiltro===v?"#fff":C.muted, fontFamily: F }}>{l}</button>
+          ))}
+          <span style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{filtrados.length} pedidos</span>
         </div>
-        {loading ? <div style={{ padding: "40px 0", textAlign: "center", color: C.muted }}>Cargando...</div> : filtrados.length === 0 ? <div style={{ padding: "40px 0", textAlign: "center", color: C.muted }}>Sin pedidos en este período</div> : (
-          <div>
-            {filtrados.map(p => {
-              const total = (p.precio_unitario || 0) * p.cantidad;
-              const fecha = new Date(p.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-              return (
-                <div key={p.id} style={{ padding: "12px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: p.pagado ? "#F8FFF9" : C.white }}>
-                  <div style={{ fontSize: 12, color: C.muted, width: 60, flexShrink: 0 }}>#{p.numero_orden || "—"}</div>
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 3 }}>{p.socios?.nombre || "—"}</div>
-                    <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <span>{p.productos?.nombre || "—"} × {p.cantidad}</span>
-                      <span style={{ textTransform: "capitalize" }}>{p.metodo_pago}</span>
-                      <span>{p.turno_delivery}</span>
-                      <span>{fecha}</span>
-                    </div>
+        {loading ? <div style={{ padding: "40px 0", textAlign: "center", color: C.muted }}>Cargando...</div>
+          : filtrados.length === 0 ? <div style={{ padding: "40px 0", textAlign: "center", color: C.muted }}>Sin pedidos en este filtro</div>
+          : filtrados.map(p => {
+            const total = (p.precio_unitario || 0) * p.cantidad;
+            const fecha = new Date(p.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+            return (
+              <div key={p.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 12, color: C.muted, width: 50, flexShrink: 0 }}>#{p.numero_orden || "—"}</div>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 2 }}>{p.socios?.nombre || "—"}</div>
+                  <div style={{ fontSize: 11, color: C.muted, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {p.socios?.cuit && <span>CUIT {p.socios.cuit}</span>}
+                    <span>{p.productos?.nombre || "—"} × {p.cantidad}</span>
+                    <span style={{ textTransform: "capitalize" }}>{p.metodo_pago}</span>
+                    <span>{fecha}</span>
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: C.dark, minWidth: 80, textAlign: "right" }}>${total.toLocaleString("es-AR")}</div>
-                  <button
-                    onClick={() => marcarPagado(p.id, !p.pagado)}
-                    style={{
-                      padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "none",
-                      background: p.pagado ? "#EAF3DE" : "#FAEEDA",
-                      color: p.pagado ? "#27500A" : "#633806",
-                      minWidth: 90,
-                    }}
-                  >
-                    {p.pagado ? "Pagado" : "Sin cobrar"}
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, minWidth: 90, textAlign: "right" }}>${total.toLocaleString("es-AR")}</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => marcarCobrado(p.id, !p.pagado)} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "none", background: p.pagado?"#EAF3DE":"#F1EFE8", color: p.pagado?"#27500A":"#888", minWidth: 80 }}>
+                    {p.pagado ? "Cobrado" : "Sin cobrar"}
                   </button>
+                  <button onClick={() => p.pagado && marcarFacturado(p.id, !p.facturado)} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: p.pagado?"pointer":"not-allowed", fontFamily: F, border: "none", background: p.facturado?"#E6F1FB":p.pagado?"#FAEEDA":"#F5F5F5", color: p.facturado?"#0C447C":p.pagado?"#633806":"#ccc", minWidth: 80, opacity: p.pagado?1:0.5 }}>
+                    {p.facturado ? "Facturado" : "Facturar"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+      </div>
+    </div>
+  );
+}
+
+// ── VENTAS ────────────────────────────────────────────────────────────
+function Ventas() {
+  const [pedidos, setPedidos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [periodo, setPeriodo] = useState("mes");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const data = await sb("pedidos?select=*,productos(nombre,variedad)&estado=neq.cancelado&order=created_at.desc");
+    setPedidos(Array.isArray(data) ? data : []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const ahora = new Date();
+  const filtrados = pedidos.filter(p => {
+    const fecha = new Date(p.created_at);
+    if (periodo === "semana") return (ahora - fecha) < 7 * 24 * 60 * 60 * 1000;
+    if (periodo === "mes") return fecha.getMonth() === ahora.getMonth() && fecha.getFullYear() === ahora.getFullYear();
+    if (periodo === "trimestre") return (ahora - fecha) < 90 * 24 * 60 * 60 * 1000;
+    return true;
+  });
+
+  const porProducto = filtrados.reduce((acc, p) => {
+    const nombre = p.productos?.nombre || "Desconocido";
+    if (!acc[nombre]) acc[nombre] = { unidades: 0, total: 0 };
+    acc[nombre].unidades += p.cantidad;
+    acc[nombre].total += (p.precio_unitario || 0) * p.cantidad;
+    return acc;
+  }, {});
+
+  const porMes = pedidos.reduce((acc, p) => {
+    const fecha = new Date(p.created_at);
+    const key = `${fecha.getFullYear()}-${String(fecha.getMonth()+1).padStart(2,'0')}`;
+    const label = fecha.toLocaleDateString("es-AR", { month: "short", year: "numeric" });
+    if (!acc[key]) acc[key] = { label, total: 0, unidades: 0 };
+    acc[key].total += (p.precio_unitario || 0) * p.cantidad;
+    acc[key].unidades += p.cantidad;
+    return acc;
+  }, {});
+  const meses = Object.entries(porMes).sort((a,b) => a[0].localeCompare(b[0])).slice(-6);
+  const maxMes = Math.max(...meses.map(([,v]) => v.total), 1);
+
+  const totalUnidades = filtrados.reduce((s, p) => s + p.cantidad, 0);
+  const totalVentas = filtrados.reduce((s, p) => s + (p.precio_unitario || 0) * p.cantidad, 0);
+  const ticketPromedio = filtrados.length ? Math.round(totalVentas / filtrados.length) : 0;
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Ventas</h2>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[["semana","Semana"],["mes","Mes"],["trimestre","Trimestre"],["todo","Todo"]].map(([v,l]) => (
+            <button key={v} onClick={() => setPeriodo(v)} style={{ padding: "6px 14px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: periodo===v?"none":`1px solid ${C.border}`, background: periodo===v?C.dark:C.white, color: periodo===v?"#fff":C.muted, fontFamily: F }}>{l}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px,1fr))", gap: 12, marginBottom: 28 }}>
+        {[["Total vendido",`$${totalVentas.toLocaleString("es-AR")}`,C.dark],["Unidades",totalUnidades,C.green],["Pedidos",filtrados.length,C.text],["Ticket promedio",`$${ticketPromedio.toLocaleString("es-AR")}`,"#8C6B1A"]].map(([l,v,c]) => (
+          <div key={l} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px" }}>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{l}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: c }}>{v}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "20px 24px", marginBottom: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 20 }}>Facturación mensual</div>
+        {loading ? <div style={{ color: C.muted, fontSize: 13 }}>Cargando...</div> : meses.length === 0 ? <div style={{ color: C.muted, fontSize: 13 }}>Sin datos</div> : (
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 12, height: 140 }}>
+            {meses.map(([key, v]) => (
+              <div key={key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                <div style={{ fontSize: 10, color: C.muted, fontWeight: 600 }}>${(v.total/1000).toFixed(0)}k</div>
+                <div style={{ width: "100%", background: C.dark, borderRadius: "4px 4px 0 0", height: Math.max(8, (v.total / maxMes) * 100) + "px" }} />
+                <div style={{ fontSize: 10, color: C.muted, textAlign: "center" }}>{v.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "20px 24px" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 16 }}>Ventas por producto</div>
+        {Object.keys(porProducto).length === 0 ? <div style={{ color: C.muted, fontSize: 13 }}>Sin datos en este período</div> : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {Object.entries(porProducto).sort((a,b) => b[1].total - a[1].total).map(([nombre, v]) => {
+              const maxTotal = Math.max(...Object.values(porProducto).map(x => x.total), 1);
+              return (
+                <div key={nombre}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
+                    <span style={{ fontWeight: 600, color: C.text }}>{nombre}</span>
+                    <span style={{ color: C.muted }}>{v.unidades} u · <strong style={{ color: C.dark }}>${v.total.toLocaleString("es-AR")}</strong></span>
+                  </div>
+                  <div style={{ height: 6, background: C.light, borderRadius: 3 }}>
+                    <div style={{ height: "100%", background: C.green, borderRadius: 3, width: `${(v.total / maxTotal) * 100}%` }} />
+                  </div>
                 </div>
               );
             })}
@@ -1029,6 +1139,7 @@ export default function Dashboard({ onLogout }) {
     { id: "pedidos", label: "Pedidos" },
     { id: "delivery", label: "Delivery" },
     { id: "facturacion", label: "Facturación" },
+    { id: "ventas", label: "Ventas" },
     { id: "socios", label: "Socios" },
     { id: "productos", label: "Productos" },
   ];
@@ -1073,6 +1184,7 @@ export default function Dashboard({ onLogout }) {
         {seccion === "pedidos" && <Pedidos toast={toast} />}
         {seccion === "delivery" && <Delivery toast={toast} />}
         {seccion === "facturacion" && <Facturacion toast={toast} />}
+        {seccion === "ventas" && <Ventas />}
         {seccion === "socios" && <Socios toast={toast} />}
         {seccion === "productos" && <Productos toast={toast} />}
       </div>
