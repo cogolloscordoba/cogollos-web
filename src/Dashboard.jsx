@@ -150,9 +150,9 @@ function TicketModal({ ticket, socios, onClose, onSave, toast }) {
           </select>
         </Field>
         <div style={{ gridColumn: "1/-1" }}>
-          <Field label="Vincular socio">
+          <Field label="Vincular persona usuaria">
             <select value={form.socio_id} onChange={e => setForm(f=>({...f, socio_id: e.target.value}))} style={inputStyle}>
-              <option value="">Sin socio vinculado</option>
+              <option value="">Sin persona usuaria vinculada</option>
               {socios.map(s => <option key={s.id} value={s.id}>{s.nombre} · DNI {s.dni}</option>)}
             </select>
           </Field>
@@ -359,7 +359,7 @@ function Pedidos({ toast }) {
   const total = producto ? producto.precio * form.cantidad : 0;
 
   const guardar = async () => {
-    if (!form.socio_id || !form.producto_id) return toast("Completá socio y producto");
+    if (!form.socio_id || !form.producto_id) return toast("Completá persona usuaria y producto");
     setSaving(true);
     await sb("pedidos", {
       method: "POST",
@@ -403,7 +403,7 @@ function Pedidos({ toast }) {
         ))}
       </div>
 
-      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por socio o producto..." style={{ ...inputStyle, marginBottom: 14, maxWidth: 300 }} />
+      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por persona usuaria o producto..." style={{ ...inputStyle, marginBottom: 14, maxWidth: 300 }} />
 
       {loading ? <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Cargando...</div> : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
@@ -445,9 +445,9 @@ function Pedidos({ toast }) {
 
       {modal && (
         <Modal title="Nuevo pedido" onClose={() => setModal(false)}>
-          <Field label="Socio">
+          <Field label="Persona usuaria">
             <select value={form.socio_id} onChange={e => setForm(f => ({...f, socio_id: e.target.value}))} style={inputStyle}>
-              <option value="">Seleccioná un socio...</option>
+              <option value="">Seleccioná una persona usuaria...</option>
               {socios.filter(s => s.estado === "activo").map(s => <option key={s.id} value={s.id}>{s.nombre} · DNI {s.dni}</option>)}
             </select>
           </Field>
@@ -598,10 +598,10 @@ function Socios({ toast }) {
     if (editando) {
       await sb(`socios?id=eq.${editando}`, { method: "PATCH", body: JSON.stringify(form) });
       setSocios(ss => ss.map(s => s.id === editando ? { ...s, ...form } : s));
-      toast("Socio actualizado");
+      toast("Persona usuaria actualizada");
     } else {
       await sb("socios", { method: "POST", body: JSON.stringify(form) });
-      toast("Socio creado");
+      toast("Persona usuaria creada");
       await load();
     }
     setModal(false);
@@ -624,7 +624,7 @@ function Socios({ toast }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Socios <span style={{ fontSize: 14, color: C.muted, fontWeight: 400 }}>({socios.length} total · {socios.filter(s=>s.estado==="activo").length} activos)</span></h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Personas usuarias <span style={{ fontSize: 14, color: C.muted, fontWeight: 400 }}>({socios.length} total · {socios.filter(s=>s.estado==="activo").length} activas)</span></h2>
         <button onClick={abrirNuevo} style={btnPrimary}>+ Nuevo socio</button>
       </div>
 
@@ -663,7 +663,7 @@ function Socios({ toast }) {
       )}
 
       {modal && (
-        <Modal title={editando ? "Editar socio" : "Nuevo socio"} onClose={() => setModal(false)}>
+        <Modal title={editando ? "Editar persona usuaria" : "Nueva persona usuaria"} onClose={() => setModal(false)}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1 / -1" }}>
               <Field label="Nombre completo"><input value={form.nombre} onChange={e => setForm(f=>({...f, nombre: e.target.value}))} style={inputStyle} /></Field>
@@ -688,7 +688,7 @@ function Socios({ toast }) {
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
             <button onClick={() => setModal(false)} style={{ ...btnSecondary, flex: 1 }}>Cancelar</button>
-            <button onClick={guardar} disabled={saving} style={{ ...btnPrimary, flex: 1 }}>{saving ? "Guardando..." : editando ? "Guardar cambios" : "Crear socio"}</button>
+            <button onClick={guardar} disabled={saving} style={{ ...btnPrimary, flex: 1 }}>{saving ? "Guardando..." : editando ? "Guardar cambios" : "Crear persona usuaria"}</button>
           </div>
         </Modal>
       )}
@@ -1140,7 +1140,7 @@ export default function Dashboard({ onLogout }) {
     { id: "delivery", label: "Delivery" },
     { id: "facturacion", label: "Facturación" },
     { id: "ventas", label: "Ventas" },
-    { id: "socios", label: "Socios" },
+    { id: "socios", label: "Personas usuarias" },
     { id: "productos", label: "Productos" },
   ];
 
@@ -1150,7 +1150,7 @@ export default function Dashboard({ onLogout }) {
 
       {/* Header */}
       <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 60, gap: 16, position: "sticky", top: 0, zIndex: 50 }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30, filter: "brightness(0) invert(1)" }} />
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30}} />
         {isMobile ? (
           <button onClick={() => setMenuOpen(o => !o)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#fff", fontSize: 22 }}>☰</button>
         ) : (
