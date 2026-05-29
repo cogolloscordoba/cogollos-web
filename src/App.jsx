@@ -646,9 +646,9 @@ function LoginSocios({ onLogin }) {
 
 // ─── LANDING INSTITUCIONAL ───────────────────────────────────────────
 const PASOS = [
-  { num: "01", titulo: "Alta en REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente, tipo de cultivo Otro, y copiá tu código de vinculación.", link: "https://reprocann.msal.gob.ar/" },
-  { num: "02", titulo: "Consulta médica", desc: "Coordinamos un turno virtual con nuestro director médico. La consulta es necesaria para completar tu vinculación y comenzar a retirar.", link: "https://forms.gle/5USo1C2WcBGeG9Qz5" },
-  { num: "03", titulo: "Vinculación a Cogollos", desc: "El equipo médico te guía para completar la vinculación en Cannalizar. Una vez aprobada, sos parte de la asociación y podés retirar.", link: "https://app.cannalizar.com.ar/invite-patient?referal=1687099523011x992708761737770400" },
+  { num: "01", titulo: "Alta en Mi Argentina y REPROCANN", desc: "Creá tu cuenta en Mi Argentina y completá el alta en REPROCANN siguiendo el instructivo. Una vez hecho, sacá una captura de pantalla en REPROCANN donde figuren tus datos y tu código de vinculación.", link: "#/instructivo", linkText: "Ver instructivo →" },
+  { num: "02", titulo: "Cita médica", desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación. Se te asignará un turno para hablar con la persona profesional (horario a convenir). La cita tiene un costo de $30.000.", link: "https://forms.gle/X9SG4XBE1ExAbSXU9", linkText: "Completar formulario →" },
+  { num: "03", titulo: "Vinculación en Cannalizar", desc: "Con los datos del equipo médico, completás la vinculación en la plataforma Cannalizar. Una vez aprobada, podés empezar a retirar.", link: "https://app.cannalizar.com.ar/invite-patient?&referal=1687099523011x992708761737770400", linkText: "Ir a Cannalizar →" },
 ];
 
 function Landing() {
@@ -787,7 +787,11 @@ function Landing() {
                 <div style={{ fontSize: 40, fontWeight: 700, color: "rgba(255,255,255,0.12)", marginBottom: 16, lineHeight: 1 }}>{paso.num}</div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 12 }}>{paso.titulo}</h3>
                 <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>{paso.desc}</p>
-                <a href={paso.link} target="_blank" rel="noreferrer" style={{ display: "inline-block", color: "#6FD67F", fontSize: 13, fontWeight: 700, borderBottom: "1px solid rgba(111,214,127,0.4)", paddingBottom: 2 }}>Ir al sitio →</a>
+                {paso.link.startsWith("#") ? (
+                  <button onClick={() => window.location.hash = paso.link} style={{ background: "none", border: "none", color: "#6FD67F", fontSize: 13, fontWeight: 700, borderBottom: "1px solid rgba(111,214,127,0.4)", paddingBottom: 2, cursor: "pointer", fontFamily: F, padding: 0 }}>{paso.linkText || "Ver →"}</button>
+                ) : (
+                  <a href={paso.link} target="_blank" rel="noreferrer" style={{ display: "inline-block", color: "#6FD67F", fontSize: 13, fontWeight: 700, borderBottom: "1px solid rgba(111,214,127,0.4)", paddingBottom: 2 }}>{paso.linkText || "Ir al sitio →"}</a>
+                )}
               </div>
             ))}
           </div>
@@ -1148,6 +1152,90 @@ function Autocultivo() {
   );
 }
 
+
+// ─── INSTRUCTIVO DE VINCULACIÓN ──────────────────────────────────────
+function Instructivo() {
+  const isMobile = useIsMobile();
+
+  const pasos = [
+    {
+      num: "01",
+      titulo: "Alta en Mi Argentina y REPROCANN",
+      desc: "Creá tu cuenta en Mi Argentina y completá el alta en REPROCANN siguiendo el instructivo paso a paso. Una vez hecho, sacá una captura de pantalla en REPROCANN donde figuren tus datos y tu código de vinculación.",
+      link: "https://drive.google.com/file/d/1roZXdQkHhDCQ5zl5FxjyJ3KJF0C6EAo0/view?usp=drive_link",
+      linkText: "Ver instructivo →",
+    },
+    {
+      num: "02",
+      titulo: "Cita médica",
+      desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación. Se te asignará un turno para conversar con la persona profesional (horario a convenir). La cita tiene un costo de $30.000.",
+      link: "https://forms.gle/X9SG4XBE1ExAbSXU9",
+      linkText: "Completar formulario →",
+    },
+    {
+      num: "03",
+      titulo: "Vinculación en Cannalizar",
+      desc: "Con los datos del equipo médico, completás la vinculación en la plataforma Cannalizar. Una vez aprobada, podés empezar a retirar tu flor seca.",
+      link: "https://app.cannalizar.com.ar/invite-patient?&referal=1687099523011x992708761737770400",
+      linkText: "Ir a Cannalizar →",
+    },
+  ];
+
+  return (
+    <div style={{ fontFamily: F, color: C.text, background: C.cream }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } html { scroll-behavior: smooth; }`}</style>
+
+      <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30, cursor: "pointer" }} onClick={() => window.location.hash = ""} />
+        <button onClick={() => window.location.hash = ""} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>← Inicio</button>
+      </div>
+
+      {/* Hero */}
+      <div style={{ background: `linear-gradient(160deg, ${C.dark} 0%, #2B7A3E 100%)`, padding: isMobile ? "60px 6% 50px" : "80px 6% 70px" }}>
+        <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
+          <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 24 }}>CÓMO VINCULARSE</div>
+          <h1 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>El proceso de vinculación a Cogollos</h1>
+          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 32 }}>Todo el proceso lleva entre 1 y 2 semanas. Te acompañamos en cada paso.</p>
+          <a href="https://forms.gle/X9SG4XBE1ExAbSXU9" target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Empezar ahora →</a>
+        </div>
+      </div>
+
+      {/* Pasos */}
+      <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.white }}>
+        <div style={{ maxWidth: 860, margin: "0 auto" }}>
+          <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: C.text, marginBottom: 40, textAlign: "center" }}>Paso a paso</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {pasos.map((p, i) => (
+              <div key={i} style={{ display: "flex", gap: 24, alignItems: "flex-start", padding: "28px", background: C.pale, borderRadius: 14, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 36, fontWeight: 700, color: C.border, lineHeight: 1, flexShrink: 0, minWidth: 52 }}>{p.num}</div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 10 }}>{p.titulo}</h3>
+                  <p style={{ color: C.body, fontSize: 14, lineHeight: 1.75, marginBottom: p.link ? 16 : 0 }}>{p.desc}</p>
+                  {p.link && (
+                    <a href={p.link} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.dark, color: "#fff", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, textDecoration: "none", fontFamily: F }}>{p.linkText}</a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.dark, textAlign: "center" }}>
+        <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: "#fff", marginBottom: 16 }}>¿Tenés dudas?</h2>
+        <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, maxWidth: 480, margin: "0 auto 32px" }}>Escribinos al WhatsApp y te ayudamos con cualquier consulta sobre el proceso.</p>
+        <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Escribirnos al WhatsApp</a>
+      </div>
+
+      <footer style={{ background: "#000", padding: "24px 6%", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>© 2026 Asociación Civil Cogollos Córdoba</span>
+        <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>WhatsApp: +54 9 3518 05-7172</a>
+      </footer>
+    </div>
+  );
+}
+
 // ─── APP PRINCIPAL ────────────────────────────────────────────────────
 export default function App() {
   const hash = useHash();
@@ -1156,7 +1244,7 @@ export default function App() {
   const [medicaLoggedIn, setMedicaLoggedIn] = useState(() => sessionStorage.getItem("cogo_medica") === "1");
 
   useEffect(() => {
-    const titles = { "#/admin": "Panel · Cogollos", "#/usuarias": "Acceso · Cogollos", "#/medica": "Portal Médico · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos" };
+    const titles = { "#/admin": "Panel · Cogollos", "#/usuarias": "Acceso · Cogollos", "#/medica": "Portal Médico · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/instructivo": "Cómo vincularse · Cogollos", "#/asociarse": "Asociarse · Cogollos" };
     document.title = titles[hash] || "Cogollos Córdoba";
   }, [hash]);
 
@@ -1171,6 +1259,7 @@ export default function App() {
   }
 
   if (hash === "#/asociarse") return <FormularioAlta />;
+  if (hash === "#/instructivo") return <Instructivo />;
   if (hash === "#/autocultivo") return <Autocultivo />;
 
   if (hash === "#/usuarias") {
