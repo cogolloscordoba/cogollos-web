@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Dashboard from "./Dashboard";
 
 // ─── Supabase ────────────────────────────────────────────────────────
@@ -112,6 +112,81 @@ function LoginAdmin({ onLogin }) {
   );
 }
 
+// ─── CHAT BOT ────────────────────────────────────────────────────────
+async function askClaude(messages, socio) {
+  const ultimoMensaje = messages.filter(m => m.role === "user").pop();
+  const historial = messages.slice(0, -1);
+  const res = await fetch("https://cogollos.app.n8n.cloud/webhook/chat-web", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mensaje: ultimoMensaje?.content || "",
+      historial,
+      socio_id: socio.id,
+      socio_nombre: socio.nombre,
+      socio_telefono: socio.telefono || "",
+    }),
+  });
+  const text = await res.text();
+  return text || "Perdoná, hubo un error. Escribinos al WhatsApp +54 9 3518 05-7172";
+}
+
+function Chat({ socio }) {
+  const [msgs, setMsgs] = useState([
+    { role: "assistant", content: `Hola ${socio.nombre.split(" ")[0]}, soy Cogo-Bot. Podés preguntarme sobre las variedades disponibles, los turnos de retiro o lo que necesites.` }
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef(null);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  const send = async () => {
+    if (!input.trim() || loading) return;
+    const text = input.trim();
+    setInput("");
+    const history = [...msgs, { role: "user", content: text }];
+    setMsgs(history);
+    setLoading(true);
+    try {
+      const reply = await askClaude(history, socio);
+      setMsgs(m => [...m, { role: "assistant", content: reply }]);
+    } catch {
+      setMsgs(m => [...m, { role: "assistant", content: "Hubo un error. Escribinos directamente al WhatsApp." }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ background: C.dark, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+        <img src="/logo.png" alt="Cogollos" style={{ height: 28 }} />
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#6FD67F" }} />
+          <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}>Cogo-Bot</span>
+        </div>
+      </div>
+      <div style={{ height: 300, overflowY: "auto", padding: 16 }}>
+        {msgs.map((m, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
+            <div style={{ maxWidth: "85%", padding: "10px 14px", background: m.role === "user" ? C.dark : C.light, color: m.role === "user" ? "#fff" : C.text, borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: F }}>{m.content}</div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: "flex", gap: 4, padding: "10px 14px", background: C.light, borderRadius: "18px 18px 18px 4px", width: "fit-content" }}>
+            {[0,1,2].map(j => <div key={j} style={{ width: 6, height: 6, borderRadius: "50%", background: C.muted, animation: `bounce 1s ${j*0.2}s infinite` }} />)}
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+      <div style={{ padding: "8px 16px 16px", display: "flex", gap: 8 }}>
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Escribi tu consulta..." style={{ ...inputStyle, fontSize: 14 }} />
+        <button onClick={send} disabled={loading || !input.trim()} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: !input.trim() ? C.border : C.dark, cursor: !input.trim() ? "not-allowed" : "pointer", color: "#fff", fontSize: 18, flexShrink: 0 }}>→</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── ZONA SOCIOS ─────────────────────────────────────────────────────
 const VARIEDADES_INFO = {
   "Sativa":  { color: "#2B7A3E", bg: "#EAF4ED" },
   "Híbrido": { color: "#8C6B1A", bg: "#FDF6E8" },
@@ -119,7 +194,6 @@ const VARIEDADES_INFO = {
   "CBD":     { color: "#1A5C7A", bg: "#E8F2F8" },
 };
 
-// ─── ZONA SOCIOS ────────────────────────────────────────────────────
 function ZonaSocios({ socio, onLogout }) {
   const isMobile = useIsMobile();
   const [productos, setProductos] = useState([]);
@@ -198,7 +272,7 @@ function ZonaSocios({ socio, onLogout }) {
 
       {/* Tabs */}
       <div style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", gap: 4 }}>
-        {[["catalogo","Catálogo"], ["mis-pedidos","Mis retiros"]].map(([id, label]) => (
+        {[["catalogo","Catálogo"], ["mis-pedidos","Mis retiros"], ["consultas","Consultas"]].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding: "14px 20px", fontSize: 14, fontWeight: tab===id ? 700 : 400, color: tab===id ? C.dark : C.muted, background: "none", border: "none", borderBottom: tab===id ? `3px solid ${C.dark}` : "3px solid transparent", cursor: "pointer", fontFamily: F }}>{label}</button>
         ))}
       </div>
@@ -318,11 +392,24 @@ function ZonaSocios({ socio, onLogout }) {
           </div>
         )}
 
+        {/* CONSULTAS */}
+        {tab === "consultas" && (
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 8 }}>Consultas</h2>
+            <p style={{ color: C.muted, fontSize: 14, marginBottom: 24 }}>Podés consultarle a Cogo-Bot sobre las variedades, turnos de retiro o cualquier duda.</p>
+            <Chat socio={socio} />
+            <div style={{ marginTop: 20, padding: "16px 20px", background: C.white, borderRadius: 12, border: `1px solid ${C.border}` }}>
+              <p style={{ color: C.muted, fontSize: 13 }}>
+                ¿Preferís hablar con una persona? WhatsApp:
+                <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: C.green, fontWeight: 700, marginLeft: 6 }}>+54 9 3518 05-7172</a>
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
 
 // ─── FORMULARIO DE ALTA ───────────────────────────────────────────────
 function FormularioAlta() {
@@ -560,7 +647,7 @@ function LoginSocios({ onLogin }) {
 // ─── LANDING INSTITUCIONAL ───────────────────────────────────────────
 const PASOS = [
   { num: "01", titulo: "Alta en REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente, tipo de cultivo Otro, y copiá tu código de vinculación.", link: "https://reprocann.msal.gob.ar/" },
-  { num: "02", titulo: "Consulta médica", desc: "Coordinamos un turno virtual con nuestro director médico. La consulta es necesaria para completar tu vinculación y comenzar a retirar.", link: "https://forms.gle/5USo1C2WcBGeG9Qz5" },
+  { num: "02", titulo: "Consulta médica", desc: "Coordinamos un turno virtual con nuestro director médico. La consulta es necesaria para completar tu vinculación y comenzar a retirar.", link: "#/asociarse" },
   { num: "03", titulo: "Vinculación a Cogollos", desc: "El equipo médico te guía para completar la vinculación en Cannalizar. Una vez aprobada, sos parte de la asociación y podés retirar.", link: "https://app.cannalizar.com.ar/invite-patient?referal=1687099523011x992708761737770400" },
 ];
 
@@ -618,7 +705,7 @@ function Landing() {
               Cannabis medicinal<br /><span style={{ color: C.green }}>legal y de calidad</span><br />en Córdoba
             </h1>
             <p style={{ color: C.body, fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 36, maxWidth: 480 }}>
-              La primera asociación cannábica de Argentina, fundada en 2001. Solo pagás lo que retirás, sin cuotas ni inscripción.
+              Somos la primera asociación cannábica de Argentina, fundada en 2001. Cultivamos cannabis medicinal para nuestros socios de forma legal, a través del sistema REPROCANN.
             </p>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
               <button onClick={() => window.location.hash = "#/asociarse"} style={{ ...btnGreen, padding: isMobile ? "13px 22px" : "14px 28px", fontSize: isMobile ? 14 : 15, width: isMobile ? "100%" : "auto" }}>Quiero asociarme</button>
@@ -644,7 +731,7 @@ function Landing() {
           <div style={{ maxWidth: 680, marginBottom: 48 }}>
             <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>QUIÉNES SOMOS</div>
             <h2 style={{ fontSize: "clamp(24px,3.5vw,40px)", fontWeight: 700, color: C.text, marginBottom: 20, lineHeight: 1.2 }}>La primera asociación cannábica de Argentina</h2>
-            <p style={{ color: C.body, fontSize: isMobile ? 14 : 16, lineHeight: 1.8 }}>Somos activistas, cultivadoras/es y profesionales de la salud que trabajamos por los derechos de las personas usuarias de cannabis y el reconocimiento de sus usos terapéuticos y de uso adulto responsable. Desde la sanción de la ley 27.350, somos una ONG habilitada para cultivar cannabis medicinal para nuestras personas vinculadas. Sin membresía mensual, sin costo de inscripción.</p>
+            <p style={{ color: C.body, fontSize: isMobile ? 14 : 16, lineHeight: 1.8 }}>Cogollos Córdoba fue fundada en 2001 por cultivadores y activistas que trabajaban por la despenalización del cannabis y el reconocimiento de sus usos terapéuticos. Desde la sanción de la ley REPROCANN, somos una ONG habilitada para cultivar cannabis medicinal para nuestros socios.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px,1fr))", gap: 16 }}>
             {[
@@ -981,7 +1068,7 @@ function Autocultivo() {
 
   const pasos = [
     { num: "01", titulo: "Registrate en REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente y tipo de cultivo Autocultivo. Completá tus datos y guardá tu código de vinculación.", link: "https://reprocann.msal.gob.ar/", linkText: "Ir a REPROCANN" },
-    { num: "02", titulo: "Consulta con un médico", desc: "REPROCANN requiere que un médico avale tu solicitud. Podés agendar una consulta virtual con nuestro director médico para obtener el aval necesario, sin necesidad de asociarte a Cogollos.", link: "https://forms.gle/5USo1C2WcBGeG9Qz5", linkText: "Agendar consulta médica" },
+    { num: "02", titulo: "Consulta con un médico", desc: "REPROCANN requiere que un médico avale tu solicitud. Podés agendar una consulta virtual con nuestro director médico para obtener el aval necesario, sin necesidad de asociarte a Cogollos.", link: "#/asociarse", linkText: "Completar formulario →" },
     { num: "03", titulo: "Presentá la documentación", desc: "Con el aval médico completás tu registro en REPROCANN. Una vez aprobado, tenés habilitación legal para cultivar hasta 9 plantas de cannabis para uso personal." },
     { num: "04", titulo: "Empezá a cultivar", desc: "Con tu REPROCANN aprobado podés cultivar de forma legal en tu domicilio. Si en algún momento querés sumarte a nuestra asociación para acceder a flor seca de calidad, las puertas están abiertas." },
   ];
@@ -1008,7 +1095,7 @@ function Autocultivo() {
           <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 24 }}>GUÍA DE AUTOCULTIVO</div>
           <h1 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>Cultivá tu cannabis de forma legal</h1>
           <p style={{ color: "rgba(255,255,255,0.7)", fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 32 }}>Si querés cultivar para uso personal, REPROCANN te da el marco legal para hacerlo. Te explicamos el proceso paso a paso.</p>
-          <a href="https://forms.gle/5USo1C2WcBGeG9Qz5" target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Agendar consulta médica</a>
+          <button onClick={() => window.location.hash = "#/asociarse"} style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, border: "none", cursor: "pointer", textDecoration: "none" }}>Completar formulario →</button>
         </div>
       </div>
 
