@@ -112,6 +112,211 @@ function LoginAdmin({ onLogin }) {
   );
 }
 
+// ─── ZONA SOCIOS ────────────────────────────────────────────────────
+function ZonaSocios({ socio, onLogout }) {
+  const isMobile = useIsMobile();
+  const [productos, setProductos] = useState([]);
+  const [cantidades, setCantidades] = useState({});
+  const [tab, setTab] = useState("catalogo");
+  const [pedidoEnviado, setPedidoEnviado] = useState(false);
+  const [turno, setTurno] = useState("lunes");
+  const [metodo, setMetodo] = useState("transferencia");
+  const [enviando, setEnviando] = useState(false);
+  const [pedidos, setPedidos] = useState([]);
+
+  useEffect(() => {
+    sb("productos?select=*&activo=eq.true&order=nombre").then(data => setProductos(Array.isArray(data) ? data : []));
+    sb(`pedidos?select=*,productos(nombre)&socio_id=eq.${socio.id}&order=created_at.desc`).then(data => setPedidos(Array.isArray(data) ? data : []));
+  }, [socio.id]);
+
+  const totalUnidades = Object.values(cantidades).reduce((s, v) => s + v, 0);
+  const totalPrecio = Object.entries(cantidades).reduce((s, [id, cant]) => {
+    const p = productos.find(p => p.id === id);
+    return s + (p ? Number(p.precio) * cant : 0);
+  }, 0);
+
+  const confirmarRetiro = async () => {
+    if (!totalUnidades) return;
+    setEnviando(true);
+    const items = Object.entries(cantidades).filter(([,c]) => c > 0);
+    for (const [producto_id, cantidad] of items) {
+      const prod = productos.find(p => p.id === producto_id);
+      await sb("pedidos", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({
+          socio_id: socio.id,
+          producto_id,
+          cantidad,
+          precio_unitario: Number(prod?.precio || 0),
+          metodo_pago: metodo,
+          turno_delivery: turno,
+          estado: "pendiente",
+        }),
+      });
+      await sb("tickets", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({
+          id: Date.now().toString() + Math.random().toString(36).slice(2),
+          tipo: "retiro",
+          prioridad: "media",
+          resumen: `Retiro ${prod?.nombre} x${cantidad} - ${turno}`,
+          socio_id: socio.id,
+          telefono: socio.telefono,
+          estado: "abierto",
+        }),
+      });
+    }
+    setCantidades({});
+    setPedidoEnviado(true);
+    setEnviando(false);
+    sb(`pedidos?select=*,productos(nombre)&socio_id=eq.${socio.id}&order=created_at.desc`).then(data => setPedidos(Array.isArray(data) ? data : []));
+  };
+
+  const estadoColor = { pendiente: ["#FAEEDA","#633806"], preparando: ["#EEEDFE","#3C3489"], en_camino: ["#E6F1FB","#0C447C"], entregado: ["#EAF3DE","#27500A"], cancelado: ["#FCEBEB","#A32D2D"] };
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.pale, fontFamily: F }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }`}</style>
+
+      {/* Header */}
+      <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 60, position: "sticky", top: 0, zIndex: 50 }}>
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30 }} />
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
+          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>Hola, {socio.nombre.split(" ")[0]}</span>
+          <button onClick={onLogout} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>Salir</button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", gap: 4 }}>
+        {[["catalogo","Catálogo"], ["mis-pedidos","Mis retiros"]].map(([id, label]) => (
+          <button key={id} onClick={() => setTab(id)} style={{ padding: "14px 20px", fontSize: 14, fontWeight: tab===id ? 700 : 400, color: tab===id ? C.dark : C.muted, background: "none", border: "none", borderBottom: tab===id ? `3px solid ${C.dark}` : "3px solid transparent", cursor: "pointer", fontFamily: F }}>{label}</button>
+        ))}
+      </div>
+
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 4%" : "32px 6%" }}>
+
+        {/* CATÁLOGO */}
+        {tab === "catalogo" && (
+          <div>
+            <div style={{ marginBottom: 28 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Variedades disponibles</h2>
+              <p style={{ color: C.muted, fontSize: 14 }}>Seleccioná las variedades que querés retirar. Los retiros se realizan los lunes, miércoles y viernes.</p>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 32 }}>
+              {productos.map(p => {
+                const info = VARIEDADES_INFO[p.variedad] || VARIEDADES_INFO["Híbrido"];
+                const cant = cantidades[p.id] || 0;
+                return (
+                  <div key={p.id} style={{ background: info.bg, border: `1.5px solid ${cant > 0 ? info.color : "transparent"}`, borderRadius: 14, padding: "20px", transition: "all 0.15s" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                      <span style={{ background: `${info.color}20`, color: info.color, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>{p.variedad}</span>
+                      <span style={{ color: C.muted, fontSize: 12 }}>{p.momento_dia}</span>
+                    </div>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 8 }}>{p.nombre}</h3>
+                    <p style={{ color: C.body, fontSize: 13, lineHeight: 1.6, marginBottom: 6 }}>{p.descripcion}</p>
+                    <p style={{ color: info.color, fontSize: 12, fontWeight: 600, marginBottom: 16 }}>{p.efecto}</p>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 14, borderTop: `1px solid ${info.color}20` }}>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: C.dark }}>${Number(p.precio).toLocaleString("es-AR")}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{p.gramos_por_unidad || 5}g por unidad</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <button onClick={() => setCantidades(c => ({ ...c, [p.id]: Math.max(0, (c[p.id]||0)-1) }))} style={{ width: 32, height: 32, borderRadius: "50%", border: `1.5px solid ${info.color}`, background: "transparent", cursor: "pointer", fontSize: 18, color: info.color, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: C.text, minWidth: 20, textAlign: "center" }}>{cant}</span>
+                        <button onClick={() => setCantidades(c => ({ ...c, [p.id]: (c[p.id]||0)+1 }))} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: info.color, cursor: "pointer", fontSize: 18, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Resumen pedido */}
+            {totalUnidades > 0 && !pedidoEnviado && (
+              <div style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 14, padding: "24px 28px" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 16 }}>Confirmar retiro</h3>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 20 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Turno de retiro</label>
+                    <select value={turno} onChange={e => setTurno(e.target.value)} style={{ ...inputStyle }}>
+                      <option value="lunes">Lunes</option>
+                      <option value="miercoles">Miércoles</option>
+                      <option value="viernes">Viernes</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Método de pago</label>
+                    <select value={metodo} onChange={e => setMetodo(e.target.value)} style={{ ...inputStyle }}>
+                      <option value="transferencia">Transferencia</option>
+                      <option value="efectivo">Efectivo</option>
+                      <option value="mercadopago">MercadoPago</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: C.muted, marginBottom: 2 }}>{totalUnidades} unidad{totalUnidades > 1 ? "es" : ""} · Retiro {turno}</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: C.dark }}>${totalPrecio.toLocaleString("es-AR")}</div>
+                  </div>
+                  <button onClick={confirmarRetiro} disabled={enviando} style={{ ...btnGreen, padding: "12px 28px" }}>{enviando ? "Enviando..." : "Confirmar retiro"}</button>
+                </div>
+              </div>
+            )}
+
+            {pedidoEnviado && (
+              <div style={{ background: C.light, border: `1.5px solid ${C.green}`, borderRadius: 14, padding: "24px 28px", textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 8 }}>Retiro solicitado</div>
+                <p style={{ color: C.body, fontSize: 14, marginBottom: 16 }}>Tu solicitud de retiro fue registrada. El equipo te va a contactar por WhatsApp para coordinar la entrega del {turno}.</p>
+                <button onClick={() => { setPedidoEnviado(false); setTab("mis-pedidos"); }} style={{ ...btnGreen, padding: "10px 24px", fontSize: 14 }}>Ver mis retiros</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MIS PEDIDOS */}
+        {tab === "mis-pedidos" && (
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 24 }}>Mis retiros</h2>
+            {pedidos.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
+                <div style={{ fontSize: 15, marginBottom: 12 }}>Todavía no tenés retiros registrados</div>
+                <button onClick={() => setTab("catalogo")} style={{ ...btnGreen, padding: "10px 24px", fontSize: 14 }}>Ver catálogo</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {pedidos.map(p => {
+                  const [bg, tc] = estadoColor[p.estado] || estadoColor.pendiente;
+                  const fecha = new Date(p.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+                  return (
+                    <div key={p.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 180 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{p.productos?.nombre || "—"}</div>
+                        <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10 }}>
+                          <span>{p.cantidad} u · ${(p.precio_unitario * p.cantidad).toLocaleString("es-AR")}</span>
+                          <span>{p.metodo_pago}</span>
+                          <span>Retiro {p.turno_delivery}</span>
+                          <span>{fecha}</span>
+                        </div>
+                      </div>
+                      <span style={{ background: bg, color: tc, borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{p.estado?.replace("_"," ")}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+
 // ─── FORMULARIO DE ALTA ───────────────────────────────────────────────
 function FormularioAlta() {
   const isMobile = useIsMobile();
