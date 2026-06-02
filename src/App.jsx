@@ -112,6 +112,13 @@ function LoginAdmin({ onLogin }) {
   );
 }
 
+const VARIEDADES_INFO = {
+  "Sativa":  { color: "#2B7A3E", bg: "#EAF4ED" },
+  "Híbrido": { color: "#8C6B1A", bg: "#FDF6E8" },
+  "Indica":  { color: "#5C2B7A", bg: "#F2EAF8" },
+  "CBD":     { color: "#1A5C7A", bg: "#E8F2F8" },
+};
+
 // ─── ZONA SOCIOS ────────────────────────────────────────────────────
 function ZonaSocios({ socio, onLogout }) {
   const isMobile = useIsMobile();
