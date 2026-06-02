@@ -564,11 +564,55 @@ function FormularioAlta() {
 // ─── LOGIN SOCIOS (DNI) ───────────────────────────────────────────────
 function LoginSocios({ onLogin }) {
   const isMobile = useIsMobile();
+  const [paso, setPaso] = useState("dni"); // dni | preguntas
   const [dni, setDni] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [socioData, setSocioData] = useState(null);
+  const [preguntas, setPreguntas] = useState([]);
+  const [respuestas, setRespuestas] = useState({});
+  const [intentos, setIntentos] = useState(0);
 
-  const verificar = async (e) => {
+  const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+
+  // Genera 2 preguntas de seguridad con los datos reales del socio
+  const generarPreguntas = (s) => {
+    const posibles = [];
+
+    // Pregunta: mes de nacimiento
+    if (s.fecha_nacimiento) {
+      const mesReal = new Date(s.fecha_nacimiento + "T00:00:00").getMonth(); // 0-11
+      const opcionesIdx = shuffle([...Array(12).keys()].filter(i => i !== mesReal)).slice(0, 3);
+      const opciones = shuffle([mesReal, ...opcionesIdx]).map(i => MESES[i]);
+      posibles.push({ id: "mes_nac", pregunta: "¿En qué mes naciste?", opciones, correcta: MESES[mesReal] });
+    }
+
+    // Pregunta: últimos 3 dígitos del teléfono
+    if (s.telefono && s.telefono.replace(/\D/g, "").length >= 3) {
+      const tel = s.telefono.replace(/\D/g, "");
+      const real = tel.slice(-3);
+      const fakes = new Set();
+      while (fakes.size < 3) {
+        const f = String(Math.floor(Math.random() * 900) + 100);
+        if (f !== real) fakes.add(f);
+      }
+      const opciones = shuffle([real, ...fakes]);
+      posibles.push({ id: "tel", pregunta: "¿Cuáles son los últimos 3 dígitos de tu teléfono?", opciones, correcta: real });
+    }
+
+    // Pregunta: ciudad
+    if (s.ciudad) {
+      const ciudadesFalsas = ["Villa María","Río Cuarto","Alta Gracia","Carlos Paz","Jesús María","San Francisco","Bell Ville","Cosquín"].filter(c => c.toLowerCase() !== s.ciudad.toLowerCase());
+      const opciones = shuffle([s.ciudad, ...shuffle(ciudadesFalsas).slice(0, 3)]);
+      posibles.push({ id: "ciudad", pregunta: "¿En qué ciudad vivís?", opciones, correcta: s.ciudad });
+    }
+
+    // Elegimos 2 preguntas al azar de las disponibles
+    return shuffle(posibles).slice(0, 2);
+  };
+
+  const buscarDni = async (e) => {
     e.preventDefault();
     if (!dni.trim()) return;
     setLoading(true);
@@ -576,7 +620,7 @@ function LoginSocios({ onLogin }) {
     try {
       const data = await sb(`socios?dni=eq.${dni.trim()}&select=*`);
       if (!data || data.length === 0) {
-        setError("El DNI ingresado no figura en nuestro registro de socios.");
+        setError("El DNI ingresado no figura en nuestro registro.");
         setLoading(false);
         return;
       }
@@ -587,15 +631,46 @@ function LoginSocios({ onLogin }) {
         return;
       }
       if (socio.estado !== "activo") {
-        setError("Tu membresía no está activa. Escribinos al WhatsApp para regularizar.");
+        setError("Tu acceso no está activo. Escribinos al WhatsApp para regularizar.");
         setLoading(false);
         return;
       }
-      onLogin(socio);
+      const pregs = generarPreguntas(socio);
+      if (pregs.length < 2) {
+        // No hay datos suficientes para verificar: dejamos entrar solo con DNI (fallback)
+        onLogin(socio);
+        return;
+      }
+      setSocioData(socio);
+      setPreguntas(pregs);
+      setRespuestas({});
+      setPaso("preguntas");
     } catch (e) {
       setError("Hubo un error. Intentá de nuevo.");
     }
     setLoading(false);
+  };
+
+  const verificarPreguntas = (e) => {
+    e.preventDefault();
+    const todasOk = preguntas.every(p => respuestas[p.id] === p.correcta);
+    if (todasOk) {
+      onLogin(socioData);
+    } else {
+      const nuevoIntento = intentos + 1;
+      setIntentos(nuevoIntento);
+      if (nuevoIntento >= 3) {
+        setError("Demasiados intentos fallidos. Escribinos al WhatsApp para acceder.");
+        setPaso("dni");
+        setIntentos(0);
+        setSocioData(null);
+      } else {
+        setError(`Respuestas incorrectas. Te quedan ${3 - nuevoIntento} intento${3 - nuevoIntento > 1 ? "s" : ""}.`);
+        // Regenerar preguntas para el siguiente intento
+        setPreguntas(generarPreguntas(socioData));
+        setRespuestas({});
+      }
+    }
   };
 
   return (
@@ -607,7 +682,7 @@ function LoginSocios({ onLogin }) {
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 30% 70%, rgba(43,122,62,0.4) 0%, transparent 60%)" }} />
           <div style={{ position: "relative" }}>
             <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 56, marginBottom: 40}} />
-            <h2 style={{ fontSize: 28, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 16 }}>Zona exclusiva para socios</h2>
+            <h2 style={{ fontSize: 28, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 16 }}>Zona de personas usuarias</h2>
             <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, lineHeight: 1.7 }}>Accedé al catálogo de variedades disponibles, solicitá tus retiros y consultá el estado de tus pedidos.</p>
           </div>
         </div>
@@ -616,28 +691,53 @@ function LoginSocios({ onLogin }) {
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, padding: isMobile ? "32px 6%" : "48px" }}>
         <div style={{ width: "100%", maxWidth: 400 }}>
           {isMobile && <img src="/logo.png" alt="Cogollos" style={{ height: 44, marginBottom: 32 }} />}
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 8 }}>Ingresar</h1>
-          <p style={{ color: C.muted, fontSize: 14, marginBottom: 32 }}>Ingresá tu DNI para acceder al catálogo.</p>
 
-          <form onSubmit={verificar}>
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tu DNI</label>
-              <input value={dni} onChange={e => setDni(e.target.value)} placeholder="Ej: 25666777" autoFocus style={{ ...inputStyle, fontSize: 18, letterSpacing: "0.05em" }} />
-            </div>
-            {error && (
-              <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "12px 16px", color: "#991B1B", fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>
-                {error}
-                {error.includes("pendiente") && <div style={{ marginTop: 8 }}><a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: "#991B1B", fontWeight: 700 }}>Consultar por WhatsApp →</a></div>}
-                {error.includes("no figura") && <div style={{ marginTop: 8 }}><button type="button" onClick={() => window.location.hash = "#/asociarse"} style={{ background: "none", border: "none", color: "#991B1B", fontWeight: 700, cursor: "pointer", fontFamily: F, padding: 0, fontSize: 13 }}>Quiero asociarme →</button></div>}
+          {paso === "dni" && (
+            <>
+              <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 8 }}>Ingresar</h1>
+              <p style={{ color: C.muted, fontSize: 14, marginBottom: 32 }}>Ingresá tu DNI para acceder al catálogo.</p>
+              <form onSubmit={buscarDni}>
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tu DNI</label>
+                  <input value={dni} onChange={e => setDni(e.target.value)} placeholder="Ej: 25666777" autoFocus style={{ ...inputStyle, fontSize: 18, letterSpacing: "0.05em" }} />
+                </div>
+                {error && (
+                  <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "12px 16px", color: "#991B1B", fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>
+                    {error}
+                    {error.includes("pendiente") && <div style={{ marginTop: 8 }}><a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: "#991B1B", fontWeight: 700 }}>Consultar por WhatsApp →</a></div>}
+                    {(error.includes("no figura") || error.includes("intentos")) && <div style={{ marginTop: 8 }}><a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: "#991B1B", fontWeight: 700 }}>Escribinos al WhatsApp →</a></div>}
+                  </div>
+                )}
+                <button type="submit" disabled={loading || !dni.trim()} style={{ ...btnGreen, width: "100%", padding: 14, fontSize: 15, opacity: !dni.trim() ? 0.5 : 1 }}>{loading ? "Verificando..." : "Continuar"}</button>
+              </form>
+              <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 10 }}>
+                <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: C.light, color: C.dark, border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: F }}>Quiero vincularme</button>
+                <button onClick={() => window.location.hash = ""} style={{ background: "transparent", color: C.muted, border: "none", fontSize: 13, cursor: "pointer", fontFamily: F, padding: "8px" }}>← Volver al sitio</button>
               </div>
-            )}
-            <button type="submit" disabled={loading || !dni.trim()} style={{ ...btnGreen, width: "100%", padding: 14, fontSize: 15, opacity: !dni.trim() ? 0.5 : 1 }}>{loading ? "Verificando..." : "Acceder"}</button>
-          </form>
+            </>
+          )}
 
-          <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 10 }}>
-            <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: C.light, color: C.dark, border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: F }}>Quiero asociarme</button>
-            <button onClick={() => window.location.hash = ""} style={{ background: "transparent", color: C.muted, border: "none", fontSize: 13, cursor: "pointer", fontFamily: F, padding: "8px" }}>← Volver al sitio</button>
-          </div>
+          {paso === "preguntas" && (
+            <>
+              <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 8 }}>Verificación</h1>
+              <p style={{ color: C.muted, fontSize: 14, marginBottom: 28 }}>Para confirmar tu identidad, respondé estas preguntas.</p>
+              <form onSubmit={verificarPreguntas}>
+                {preguntas.map(p => (
+                  <div key={p.id} style={{ marginBottom: 24 }}>
+                    <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 12 }}>{p.pregunta}</label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      {p.opciones.map(op => (
+                        <button key={op} type="button" onClick={() => setRespuestas(r => ({ ...r, [p.id]: op }))} style={{ padding: "12px 10px", borderRadius: 10, border: respuestas[p.id] === op ? `2px solid ${C.green}` : `1.5px solid ${C.border}`, background: respuestas[p.id] === op ? C.light : C.white, color: C.text, fontSize: 14, fontWeight: respuestas[p.id] === op ? 700 : 400, cursor: "pointer", fontFamily: F, textAlign: "center" }}>{op}</button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "12px 16px", color: "#991B1B", fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>{error}</div>}
+                <button type="submit" disabled={preguntas.some(p => !respuestas[p.id])} style={{ ...btnGreen, width: "100%", padding: 14, fontSize: 15, opacity: preguntas.some(p => !respuestas[p.id]) ? 0.5 : 1 }}>Acceder</button>
+              </form>
+              <button onClick={() => { setPaso("dni"); setError(""); setSocioData(null); setRespuestas({}); }} style={{ background: "transparent", color: C.muted, border: "none", fontSize: 13, cursor: "pointer", fontFamily: F, padding: "8px", marginTop: 16, width: "100%" }}>← Usar otro DNI</button>
+            </>
+          )}
         </div>
       </div>
     </div>

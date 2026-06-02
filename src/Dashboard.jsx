@@ -583,9 +583,10 @@ function Socios({ toast }) {
   const [socios, setSocios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
-  const [form, setForm] = useState({ nombre: "", dni: "", telefono: "", email: "", direccion: "", cuit: "", estado: "activo", notas: "", nro_tramite_reprocann: "" });
+  const [form, setForm] = useState({ nombre: "", dni: "", telefono: "", email: "", direccion: "", cuit: "", estado: "activo", notas: "", reprocann_codigo: "", reprocann_nro_tramite: "", consulta_realizada: false });
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -597,8 +598,8 @@ function Socios({ toast }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const abrirNuevo = () => { setEditando(null); setForm({ nombre: "", dni: "", telefono: "", email: "", direccion: "", cuit: "", estado: "activo", notas: "", nro_tramite_reprocann: "" }); setModal(true); };
-  const abrirEditar = (s) => { setEditando(s.id); setForm({ nombre: s.nombre||"", dni: s.dni||"", telefono: s.telefono||"", email: s.email||"", direccion: s.direccion||"", cuit: s.cuit||"", estado: s.estado||"activo", notas: s.notas||"", nro_tramite_reprocann: s.nro_tramite_reprocann||"" }); setModal(true); };
+  const abrirNuevo = () => { setEditando(null); setForm({ nombre: "", dni: "", telefono: "", email: "", direccion: "", cuit: "", estado: "activo", notas: "", reprocann_codigo: "", reprocann_nro_tramite: "", consulta_realizada: false }); setModal(true); };
+  const abrirEditar = (s) => { setEditando(s.id); setForm({ nombre: s.nombre||"", dni: s.dni||"", telefono: s.telefono||"", email: s.email||"", direccion: s.direccion||"", cuit: s.cuit||"", estado: s.estado||"activo", notas: s.notas||"", reprocann_codigo: s.reprocann_codigo||"", reprocann_nro_tramite: s.reprocann_nro_tramite||"", consulta_realizada: s.consulta_realizada||false }); setModal(true); };
 
   const guardar = async () => {
     if (!form.nombre || !form.dni) return toast("Nombre y DNI son obligatorios");
@@ -622,10 +623,27 @@ function Socios({ toast }) {
     toast("Estado actualizado");
   };
 
+  const marcarConsulta = async (id) => {
+    await sb(`socios?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ consulta_realizada: true, estado: "activo", fecha_consulta: new Date().toISOString().slice(0,10) }) });
+    setSocios(ss => ss.map(s => s.id === id ? { ...s, consulta_realizada: true, estado: "activo" } : s));
+    toast("Consulta registrada — persona activada");
+  };
+
   const filtered = socios.filter(s => {
     const q = search.toLowerCase();
-    return !q || s.nombre?.toLowerCase().includes(q) || s.dni?.includes(q) || s.telefono?.includes(q);
+    const matchSearch = !q || s.nombre?.toLowerCase().includes(q) || s.dni?.includes(q) || s.telefono?.includes(q);
+    const matchEstado =
+      filtroEstado === "todos" ? true :
+      filtroEstado === "sin_consulta" ? (s.estado === "pendiente" && !s.consulta_realizada) :
+      s.estado === filtroEstado;
+    return matchSearch && matchEstado;
   });
+
+  const stats = {
+    activos: socios.filter(s => s.estado === "activo").length,
+    pendientes: socios.filter(s => s.estado === "pendiente").length,
+    sin_consulta: socios.filter(s => s.estado === "pendiente" && !s.consulta_realizada).length,
+  };
 
   const estadoColor = { activo: ["#EAF3DE","#27500A"], pendiente: ["#FAEEDA","#633806"], inactivo: ["#F1EFE8","#444441"] };
 
@@ -636,7 +654,19 @@ function Socios({ toast }) {
         <button onClick={abrirNuevo} style={btnPrimary}>+ Nuevo socio</button>
       </div>
 
-      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre, DNI o teléfono..." style={{ ...inputStyle, maxWidth: 360, marginBottom: 16 }} />
+      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre, DNI o teléfono..." style={{ ...inputStyle, maxWidth: 360, marginBottom: 12 }} />
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {[
+          ["todos", `Todos (${socios.length})`],
+          ["activo", `Activos (${stats.activos})`],
+          ["pendiente", `Pendientes (${stats.pendientes})`],
+          ["sin_consulta", `Sin revisión médica (${stats.sin_consulta})`],
+          ["inactivo", "Inactivos"],
+        ].map(([v, l]) => (
+          <button key={v} onClick={() => setFiltroEstado(v)} style={{ padding: "6px 14px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: filtroEstado === v ? "none" : `1px solid ${C.border}`, background: filtroEstado === v ? C.dark : C.white, color: filtroEstado === v ? "#fff" : C.muted, fontFamily: F }}>{l}</button>
+        ))}
+      </div>
 
       {loading ? <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Cargando...</div> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -649,10 +679,13 @@ function Socios({ toast }) {
                 </div>
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>{s.nombre}</div>
-                  <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                     <span>DNI {s.dni}</span>
                     {s.telefono && <span>{s.telefono}</span>}
-                    {s.direccion && <span>{s.direccion}</span>}
+                    {s.reprocann_codigo && <span style={{ color: C.green }}>REPROCANN ✓</span>}
+                    {s.consulta_realizada
+                      ? <span style={{ color: "#27500A", fontWeight: 600 }}>● Consulta realizada</span>
+                      : <span style={{ color: "#991B1B", fontWeight: 600 }}>● Sin revisión médica</span>}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -662,6 +695,7 @@ function Socios({ toast }) {
                     <option value="pendiente">Pendiente</option>
                     <option value="inactivo">Inactivo</option>
                   </select>
+                  {!s.consulta_realizada && <button onClick={() => marcarConsulta(s.id)} style={{ background: C.green, color: "#fff", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontFamily: F, fontWeight: 600 }}>✓ Consulta</button>}
                   <button onClick={() => abrirEditar(s)} style={{ ...btnSecondary, padding: "5px 12px", fontSize: 12 }}>Editar</button>
                 </div>
               </div>
@@ -693,8 +727,16 @@ function Socios({ toast }) {
             <div style={{ gridColumn: "1 / -1" }}>
               <Field label="Notas"><textarea value={form.notas} onChange={e => setForm(f=>({...f, notas: e.target.value}))} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} /></Field>
             </div>
+            <Field label="Código REPROCANN (opcional)"><input value={form.reprocann_codigo} onChange={e => setForm(f=>({...f, reprocann_codigo: e.target.value}))} style={inputStyle} placeholder="Ej: Jbq9Chv509694" /></Field>
+            <Field label="Nº Trámite REPROCANN (opcional)"><input value={form.reprocann_nro_tramite} onChange={e => setForm(f=>({...f, reprocann_nro_tramite: e.target.value}))} style={inputStyle} placeholder="Ej: 407166" /></Field>
             <div style={{ gridColumn: "1 / -1" }}>
-              <Field label="Nº Trámite REPROCANN (opcional)"><input value={form.nro_tramite_reprocann} onChange={e => setForm(f=>({...f, nro_tramite_reprocann: e.target.value}))} style={inputStyle} placeholder="Ej: 407166" /></Field>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "12px 14px", background: form.consulta_realizada ? C.light : "#FAFAF8", borderRadius: 10, border: `1.5px solid ${form.consulta_realizada ? C.green : C.border}` }}>
+                <input type="checkbox" checked={form.consulta_realizada} onChange={e => setForm(f=>({...f, consulta_realizada: e.target.checked, estado: e.target.checked ? "activo" : f.estado}))} style={{ width: 18, height: 18, accentColor: C.dark }} />
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Consulta médica realizada</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Al marcarla, la persona pasa a estado activo</div>
+                </div>
+              </label>
             </div>
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
