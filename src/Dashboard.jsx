@@ -150,9 +150,9 @@ function TicketModal({ ticket, socios, onClose, onSave, toast }) {
           </select>
         </Field>
         <div style={{ gridColumn: "1/-1" }}>
-          <Field label="Vincular persona usuaria">
+          <Field label="Vincular socio">
             <select value={form.socio_id} onChange={e => setForm(f=>({...f, socio_id: e.target.value}))} style={inputStyle}>
-              <option value="">Sin persona usuaria vinculada</option>
+              <option value="">Sin socio vinculado</option>
               {socios.map(s => <option key={s.id} value={s.id}>{s.nombre} · DNI {s.dni}</option>)}
             </select>
           </Field>
@@ -336,7 +336,7 @@ function Pedidos({ toast }) {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ socio_id: "", producto_id: "", cantidad: 1, metodo_pago: "efectivo", turno_delivery: "lunes", estado: "pendiente" });
+  const [form, setForm] = useState({ socio_id: "", producto_id: "", cantidad: 1, metodo_pago: "efectivo", turno_delivery: "lunes", modalidad: "delivery", estado: "pendiente" });
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -359,7 +359,7 @@ function Pedidos({ toast }) {
   const total = producto ? producto.precio * form.cantidad : 0;
 
   const guardar = async () => {
-    if (!form.socio_id || !form.producto_id) return toast("Completá persona usuaria y producto");
+    if (!form.socio_id || !form.producto_id) return toast("Completá socio y producto");
     setSaving(true);
     await sb("pedidos", {
       method: "POST",
@@ -367,7 +367,7 @@ function Pedidos({ toast }) {
     });
     toast("Pedido creado");
     setModal(false);
-    setForm({ socio_id: "", producto_id: "", cantidad: 1, metodo_pago: "efectivo", turno_delivery: "lunes", estado: "pendiente" });
+    setForm({ socio_id: "", producto_id: "", cantidad: 1, metodo_pago: "efectivo", turno_delivery: "lunes", modalidad: "delivery", estado: "pendiente" });
     await load();
     setSaving(false);
   };
@@ -403,7 +403,7 @@ function Pedidos({ toast }) {
         ))}
       </div>
 
-      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por persona usuaria o producto..." style={{ ...inputStyle, marginBottom: 14, maxWidth: 300 }} />
+      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por socio o producto..." style={{ ...inputStyle, marginBottom: 14, maxWidth: 300 }} />
 
       {loading ? <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Cargando...</div> : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
@@ -423,7 +423,7 @@ function Pedidos({ toast }) {
                     <span>{p.productos?.nombre || "—"} × {p.cantidad}</span>
                     <span style={{ fontWeight: 600, color: C.green }}>${(p.precio_unitario * p.cantidad).toLocaleString("es-AR")}</span>
                     <span>{p.metodo_pago}</span>
-                    <span>Delivery: {p.turno_delivery}</span>
+                    <span>{p.modalidad === "retiro" ? "Retiro" : "Delivery"}: {p.turno_delivery}</span>
                     <span>{fecha}</span>
                   </div>
                 </div>
@@ -445,9 +445,9 @@ function Pedidos({ toast }) {
 
       {modal && (
         <Modal title="Nuevo pedido" onClose={() => setModal(false)}>
-          <Field label="Persona usuaria">
+          <Field label="Socio">
             <select value={form.socio_id} onChange={e => setForm(f => ({...f, socio_id: e.target.value}))} style={inputStyle}>
-              <option value="">Seleccioná una persona usuaria...</option>
+              <option value="">Seleccioná un socio...</option>
               {socios.filter(s => s.estado === "activo").map(s => <option key={s.id} value={s.id}>{s.nombre} · DNI {s.dni}</option>)}
             </select>
           </Field>
@@ -469,13 +469,21 @@ function Pedidos({ toast }) {
               </select>
             </Field>
           </div>
-          <Field label="Turno de delivery">
-            <select value={form.turno_delivery} onChange={e => setForm(f => ({...f, turno_delivery: e.target.value}))} style={inputStyle}>
-              <option value="lunes">Lunes</option>
-              <option value="miercoles">Miércoles</option>
-              <option value="viernes">Viernes</option>
-            </select>
-          </Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Modalidad">
+              <select value={form.modalidad} onChange={e => setForm(f => ({...f, modalidad: e.target.value}))} style={inputStyle}>
+                <option value="delivery">Delivery</option>
+                <option value="retiro">Retiro (A convenir)</option>
+              </select>
+            </Field>
+            <Field label="Día">
+              <select value={form.turno_delivery} onChange={e => setForm(f => ({...f, turno_delivery: e.target.value}))} style={inputStyle}>
+                <option value="lunes">Lunes</option>
+                <option value="miercoles">Miércoles</option>
+                <option value="viernes">Viernes</option>
+              </select>
+            </Field>
+          </div>
           {total > 0 && <div style={{ background: C.light, borderRadius: 8, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between" }}>
             <span style={{ fontSize: 14, color: C.muted }}>Total del pedido</span>
             <span style={{ fontSize: 16, fontWeight: 700, color: C.dark }}>${total.toLocaleString("es-AR")}</span>
@@ -577,7 +585,7 @@ function Socios({ toast }) {
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
-  const [form, setForm] = useState({ nombre: "", dni: "", telefono: "", email: "", direccion: "", cuit: "", estado: "activo", notas: "" });
+  const [form, setForm] = useState({ nombre: "", dni: "", telefono: "", email: "", direccion: "", cuit: "", estado: "activo", notas: "", nro_tramite_reprocann: "" });
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -589,8 +597,8 @@ function Socios({ toast }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const abrirNuevo = () => { setEditando(null); setForm({ nombre: "", dni: "", telefono: "", email: "", direccion: "", cuit: "", estado: "activo", notas: "" }); setModal(true); };
-  const abrirEditar = (s) => { setEditando(s.id); setForm({ nombre: s.nombre||"", dni: s.dni||"", telefono: s.telefono||"", email: s.email||"", direccion: s.direccion||"", cuit: s.cuit||"", estado: s.estado||"activo", notas: s.notas||"" }); setModal(true); };
+  const abrirNuevo = () => { setEditando(null); setForm({ nombre: "", dni: "", telefono: "", email: "", direccion: "", cuit: "", estado: "activo", notas: "", nro_tramite_reprocann: "" }); setModal(true); };
+  const abrirEditar = (s) => { setEditando(s.id); setForm({ nombre: s.nombre||"", dni: s.dni||"", telefono: s.telefono||"", email: s.email||"", direccion: s.direccion||"", cuit: s.cuit||"", estado: s.estado||"activo", notas: s.notas||"", nro_tramite_reprocann: s.nro_tramite_reprocann||"" }); setModal(true); };
 
   const guardar = async () => {
     if (!form.nombre || !form.dni) return toast("Nombre y DNI son obligatorios");
@@ -598,10 +606,10 @@ function Socios({ toast }) {
     if (editando) {
       await sb(`socios?id=eq.${editando}`, { method: "PATCH", body: JSON.stringify(form) });
       setSocios(ss => ss.map(s => s.id === editando ? { ...s, ...form } : s));
-      toast("Persona usuaria actualizada");
+      toast("Socio actualizado");
     } else {
       await sb("socios", { method: "POST", body: JSON.stringify(form) });
-      toast("Persona usuaria creada");
+      toast("Socio creado");
       await load();
     }
     setModal(false);
@@ -624,7 +632,7 @@ function Socios({ toast }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Personas usuarias <span style={{ fontSize: 14, color: C.muted, fontWeight: 400 }}>({socios.length} total · {socios.filter(s=>s.estado==="activo").length} activas)</span></h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Socios <span style={{ fontSize: 14, color: C.muted, fontWeight: 400 }}>({socios.length} total · {socios.filter(s=>s.estado==="activo").length} activos)</span></h2>
         <button onClick={abrirNuevo} style={btnPrimary}>+ Nuevo socio</button>
       </div>
 
@@ -663,7 +671,7 @@ function Socios({ toast }) {
       )}
 
       {modal && (
-        <Modal title={editando ? "Editar persona usuaria" : "Nueva persona usuaria"} onClose={() => setModal(false)}>
+        <Modal title={editando ? "Editar socio" : "Nuevo socio"} onClose={() => setModal(false)}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1 / -1" }}>
               <Field label="Nombre completo"><input value={form.nombre} onChange={e => setForm(f=>({...f, nombre: e.target.value}))} style={inputStyle} /></Field>
@@ -685,10 +693,13 @@ function Socios({ toast }) {
             <div style={{ gridColumn: "1 / -1" }}>
               <Field label="Notas"><textarea value={form.notas} onChange={e => setForm(f=>({...f, notas: e.target.value}))} style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} /></Field>
             </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Field label="Nº Trámite REPROCANN (opcional)"><input value={form.nro_tramite_reprocann} onChange={e => setForm(f=>({...f, nro_tramite_reprocann: e.target.value}))} style={inputStyle} placeholder="Ej: 407166" /></Field>
+            </div>
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
             <button onClick={() => setModal(false)} style={{ ...btnSecondary, flex: 1 }}>Cancelar</button>
-            <button onClick={guardar} disabled={saving} style={{ ...btnPrimary, flex: 1 }}>{saving ? "Guardando..." : editando ? "Guardar cambios" : "Crear persona usuaria"}</button>
+            <button onClick={guardar} disabled={saving} style={{ ...btnPrimary, flex: 1 }}>{saving ? "Guardando..." : editando ? "Guardar cambios" : "Crear socio"}</button>
           </div>
         </Modal>
       )}
@@ -1140,7 +1151,7 @@ export default function Dashboard({ onLogout }) {
     { id: "delivery", label: "Delivery" },
     { id: "facturacion", label: "Facturación" },
     { id: "ventas", label: "Ventas" },
-    { id: "socios", label: "Personas usuarias" },
+    { id: "socios", label: "Socios" },
     { id: "productos", label: "Productos" },
   ];
 

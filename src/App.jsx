@@ -112,305 +112,6 @@ function LoginAdmin({ onLogin }) {
   );
 }
 
-// ─── CHAT BOT ────────────────────────────────────────────────────────
-async function askClaude(messages, socio) {
-  const ultimoMensaje = messages.filter(m => m.role === "user").pop();
-  const historial = messages.slice(0, -1);
-  const res = await fetch("https://cogollos.app.n8n.cloud/webhook/chat-web", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mensaje: ultimoMensaje?.content || "",
-      historial,
-      socio_id: socio.id,
-      socio_nombre: socio.nombre,
-      socio_telefono: socio.telefono || "",
-    }),
-  });
-  const text = await res.text();
-  return text || "Perdoná, hubo un error. Escribinos al WhatsApp +54 9 3518 05-7172";
-}
-
-function Chat({ socio }) {
-  const [msgs, setMsgs] = useState([
-    { role: "assistant", content: `Hola ${socio.nombre.split(" ")[0]}, soy Cogo-Bot. Podés preguntarme sobre las variedades disponibles, los turnos de retiro o lo que necesites.` }
-  ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const endRef = useRef(null);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
-
-  const send = async () => {
-    if (!input.trim() || loading) return;
-    const text = input.trim();
-    setInput("");
-    const history = [...msgs, { role: "user", content: text }];
-    setMsgs(history);
-    setLoading(true);
-    try {
-      const reply = await askClaude(history, socio);
-      setMsgs(m => [...m, { role: "assistant", content: reply }]);
-    } catch {
-      setMsgs(m => [...m, { role: "assistant", content: "Hubo un error. Escribinos directamente al WhatsApp." }]);
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
-      <div style={{ background: C.dark, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 28 }} />
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#6FD67F" }} />
-          <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}>Cogo-Bot</span>
-        </div>
-      </div>
-      <div style={{ height: 300, overflowY: "auto", padding: 16 }}>
-        {msgs.map((m, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
-            <div style={{ maxWidth: "85%", padding: "10px 14px", background: m.role === "user" ? C.dark : C.light, color: m.role === "user" ? "#fff" : C.text, borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: F }}>{m.content}</div>
-          </div>
-        ))}
-        {loading && (
-          <div style={{ display: "flex", gap: 4, padding: "10px 14px", background: C.light, borderRadius: "18px 18px 18px 4px", width: "fit-content" }}>
-            {[0,1,2].map(j => <div key={j} style={{ width: 6, height: 6, borderRadius: "50%", background: C.muted, animation: `bounce 1s ${j*0.2}s infinite` }} />)}
-          </div>
-        )}
-        <div ref={endRef} />
-      </div>
-      <div style={{ padding: "8px 16px 16px", display: "flex", gap: 8 }}>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Escribi tu consulta..." style={{ ...inputStyle, fontSize: 14 }} />
-        <button onClick={send} disabled={loading || !input.trim()} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: !input.trim() ? C.border : C.dark, cursor: !input.trim() ? "not-allowed" : "pointer", color: "#fff", fontSize: 18, flexShrink: 0 }}>→</button>
-      </div>
-    </div>
-  );
-}
-
-// ─── ZONA SOCIOS ─────────────────────────────────────────────────────
-const VARIEDADES_INFO = {
-  "Sativa":  { color: "#2B7A3E", bg: "#EAF4ED" },
-  "Híbrido": { color: "#8C6B1A", bg: "#FDF6E8" },
-  "Indica":  { color: "#5C2B7A", bg: "#F2EAF8" },
-  "CBD":     { color: "#1A5C7A", bg: "#E8F2F8" },
-};
-
-function ZonaSocios({ socio, onLogout }) {
-  const isMobile = useIsMobile();
-  const [productos, setProductos] = useState([]);
-  const [cantidades, setCantidades] = useState({});
-  const [tab, setTab] = useState("catalogo");
-  const [pedidoEnviado, setPedidoEnviado] = useState(false);
-  const [turno, setTurno] = useState("lunes");
-  const [metodo, setMetodo] = useState("transferencia");
-  const [enviando, setEnviando] = useState(false);
-  const [pedidos, setPedidos] = useState([]);
-
-  useEffect(() => {
-    sb("productos?select=*&activo=eq.true&order=nombre").then(data => setProductos(Array.isArray(data) ? data : []));
-    sb(`pedidos?select=*,productos(nombre)&socio_id=eq.${socio.id}&order=created_at.desc`).then(data => setPedidos(Array.isArray(data) ? data : []));
-  }, [socio.id]);
-
-  const totalUnidades = Object.values(cantidades).reduce((s, v) => s + v, 0);
-  const totalPrecio = Object.entries(cantidades).reduce((s, [id, cant]) => {
-    const p = productos.find(p => p.id === id);
-    return s + (p ? Number(p.precio) * cant : 0);
-  }, 0);
-
-  const confirmarRetiro = async () => {
-    if (!totalUnidades) return;
-    setEnviando(true);
-    const items = Object.entries(cantidades).filter(([,c]) => c > 0);
-    for (const [producto_id, cantidad] of items) {
-      const prod = productos.find(p => p.id === producto_id);
-      await sb("pedidos", {
-        method: "POST",
-        headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({
-          socio_id: socio.id,
-          producto_id,
-          cantidad,
-          precio_unitario: Number(prod?.precio || 0),
-          metodo_pago: metodo,
-          turno_delivery: turno,
-          estado: "pendiente",
-        }),
-      });
-      await sb("tickets", {
-        method: "POST",
-        headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({
-          id: Date.now().toString() + Math.random().toString(36).slice(2),
-          tipo: "retiro",
-          prioridad: "media",
-          resumen: `Retiro ${prod?.nombre} x${cantidad} - ${turno}`,
-          socio_id: socio.id,
-          telefono: socio.telefono,
-          estado: "abierto",
-        }),
-      });
-    }
-    setCantidades({});
-    setPedidoEnviado(true);
-    setEnviando(false);
-    sb(`pedidos?select=*,productos(nombre)&socio_id=eq.${socio.id}&order=created_at.desc`).then(data => setPedidos(Array.isArray(data) ? data : []));
-  };
-
-  const estadoColor = { pendiente: ["#FAEEDA","#633806"], preparando: ["#EEEDFE","#3C3489"], en_camino: ["#E6F1FB","#0C447C"], entregado: ["#EAF3DE","#27500A"], cancelado: ["#FCEBEB","#A32D2D"] };
-
-  return (
-    <div style={{ minHeight: "100vh", background: C.pale, fontFamily: F }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }`}</style>
-
-      {/* Header */}
-      <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 60, position: "sticky", top: 0, zIndex: 50 }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30 }} />
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>Hola, {socio.nombre.split(" ")[0]}</span>
-          <button onClick={onLogout} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>Salir</button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", gap: 4 }}>
-        {[["catalogo","Catálogo"], ["mis-pedidos","Mis retiros"], ["consultas","Consultas"]].map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{ padding: "14px 20px", fontSize: 14, fontWeight: tab===id ? 700 : 400, color: tab===id ? C.dark : C.muted, background: "none", border: "none", borderBottom: tab===id ? `3px solid ${C.dark}` : "3px solid transparent", cursor: "pointer", fontFamily: F }}>{label}</button>
-        ))}
-      </div>
-
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 4%" : "32px 6%" }}>
-
-        {/* CATÁLOGO */}
-        {tab === "catalogo" && (
-          <div>
-            <div style={{ marginBottom: 28 }}>
-              <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Variedades disponibles</h2>
-              <p style={{ color: C.muted, fontSize: 14 }}>Seleccioná las variedades que querés retirar. Los retiros se realizan los lunes, miércoles y viernes.</p>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 32 }}>
-              {productos.map(p => {
-                const info = VARIEDADES_INFO[p.variedad] || VARIEDADES_INFO["Híbrido"];
-                const cant = cantidades[p.id] || 0;
-                return (
-                  <div key={p.id} style={{ background: info.bg, border: `1.5px solid ${cant > 0 ? info.color : "transparent"}`, borderRadius: 14, padding: "20px", transition: "all 0.15s" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                      <span style={{ background: `${info.color}20`, color: info.color, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>{p.variedad}</span>
-                      <span style={{ color: C.muted, fontSize: 12 }}>{p.momento_dia}</span>
-                    </div>
-                    <h3 style={{ fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 8 }}>{p.nombre}</h3>
-                    <p style={{ color: C.body, fontSize: 13, lineHeight: 1.6, marginBottom: 6 }}>{p.descripcion}</p>
-                    <p style={{ color: info.color, fontSize: 12, fontWeight: 600, marginBottom: 16 }}>{p.efecto}</p>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 14, borderTop: `1px solid ${info.color}20` }}>
-                      <div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: C.dark }}>${Number(p.precio).toLocaleString("es-AR")}</div>
-                        <div style={{ fontSize: 11, color: C.muted }}>{p.gramos_por_unidad || 5}g por unidad</div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <button onClick={() => setCantidades(c => ({ ...c, [p.id]: Math.max(0, (c[p.id]||0)-1) }))} style={{ width: 32, height: 32, borderRadius: "50%", border: `1.5px solid ${info.color}`, background: "transparent", cursor: "pointer", fontSize: 18, color: info.color, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                        <span style={{ fontSize: 16, fontWeight: 700, color: C.text, minWidth: 20, textAlign: "center" }}>{cant}</span>
-                        <button onClick={() => setCantidades(c => ({ ...c, [p.id]: (c[p.id]||0)+1 }))} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: info.color, cursor: "pointer", fontSize: 18, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Resumen pedido */}
-            {totalUnidades > 0 && !pedidoEnviado && (
-              <div style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 14, padding: "24px 28px" }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 16 }}>Confirmar retiro</h3>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 20 }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Turno de retiro</label>
-                    <select value={turno} onChange={e => setTurno(e.target.value)} style={{ ...inputStyle }}>
-                      <option value="lunes">Lunes</option>
-                      <option value="miercoles">Miércoles</option>
-                      <option value="viernes">Viernes</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Método de pago</label>
-                    <select value={metodo} onChange={e => setMetodo(e.target.value)} style={{ ...inputStyle }}>
-                      <option value="transferencia">Transferencia</option>
-                      <option value="efectivo">Efectivo</option>
-                      <option value="mercadopago">MercadoPago</option>
-                    </select>
-                  </div>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 13, color: C.muted, marginBottom: 2 }}>{totalUnidades} unidad{totalUnidades > 1 ? "es" : ""} · Retiro {turno}</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: C.dark }}>${totalPrecio.toLocaleString("es-AR")}</div>
-                  </div>
-                  <button onClick={confirmarRetiro} disabled={enviando} style={{ ...btnGreen, padding: "12px 28px" }}>{enviando ? "Enviando..." : "Confirmar retiro"}</button>
-                </div>
-              </div>
-            )}
-
-            {pedidoEnviado && (
-              <div style={{ background: C.light, border: `1.5px solid ${C.green}`, borderRadius: 14, padding: "24px 28px", textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 8 }}>Retiro solicitado</div>
-                <p style={{ color: C.body, fontSize: 14, marginBottom: 16 }}>Tu solicitud de retiro fue registrada. El equipo te va a contactar por WhatsApp para coordinar la entrega del {turno}.</p>
-                <button onClick={() => { setPedidoEnviado(false); setTab("mis-pedidos"); }} style={{ ...btnGreen, padding: "10px 24px", fontSize: 14 }}>Ver mis retiros</button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* MIS PEDIDOS */}
-        {tab === "mis-pedidos" && (
-          <div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 24 }}>Mis retiros</h2>
-            {pedidos.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
-                <div style={{ fontSize: 15, marginBottom: 12 }}>Todavía no tenés retiros registrados</div>
-                <button onClick={() => setTab("catalogo")} style={{ ...btnGreen, padding: "10px 24px", fontSize: 14 }}>Ver catálogo</button>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {pedidos.map(p => {
-                  const [bg, tc] = estadoColor[p.estado] || estadoColor.pendiente;
-                  const fecha = new Date(p.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
-                  return (
-                    <div key={p.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                      <div style={{ flex: 1, minWidth: 180 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{p.productos?.nombre || "—"}</div>
-                        <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10 }}>
-                          <span>{p.cantidad} u · ${(p.precio_unitario * p.cantidad).toLocaleString("es-AR")}</span>
-                          <span>{p.metodo_pago}</span>
-                          <span>Retiro {p.turno_delivery}</span>
-                          <span>{fecha}</span>
-                        </div>
-                      </div>
-                      <span style={{ background: bg, color: tc, borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{p.estado?.replace("_"," ")}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* CONSULTAS */}
-        {tab === "consultas" && (
-          <div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 8 }}>Consultas</h2>
-            <p style={{ color: C.muted, fontSize: 14, marginBottom: 24 }}>Podés consultarle a Cogo-Bot sobre las variedades, turnos de retiro o cualquier duda.</p>
-            <Chat socio={socio} />
-            <div style={{ marginTop: 20, padding: "16px 20px", background: C.white, borderRadius: 12, border: `1px solid ${C.border}` }}>
-              <p style={{ color: C.muted, fontSize: 13 }}>
-                ¿Preferís hablar con una persona? WhatsApp:
-                <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: C.green, fontWeight: 700, marginLeft: 6 }}>+54 9 3518 05-7172</a>
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── FORMULARIO DE ALTA ───────────────────────────────────────────────
 function FormularioAlta() {
   const isMobile = useIsMobile();
@@ -498,7 +199,7 @@ function FormularioAlta() {
 
       <div style={{ maxWidth: 560, margin: "0 auto", padding: isMobile ? "32px 4%" : "48px 6%" }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 8 }}>Quiero vincularme</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 8 }}>Quiero asociarme</h1>
           <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.7 }}>Completá el formulario y el equipo te va a contactar para coordinar la consulta médica, que es el paso previo a la vinculación.</p>
         </div>
 
@@ -576,7 +277,7 @@ function LoginSocios({ onLogin }) {
     try {
       const data = await sb(`socios?dni=eq.${dni.trim()}&select=*`);
       if (!data || data.length === 0) {
-        setError("El DNI ingresado no figura en nuestro registro.");
+        setError("El DNI ingresado no figura en nuestro registro de socios.");
         setLoading(false);
         return;
       }
@@ -607,7 +308,7 @@ function LoginSocios({ onLogin }) {
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 30% 70%, rgba(43,122,62,0.4) 0%, transparent 60%)" }} />
           <div style={{ position: "relative" }}>
             <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 56, marginBottom: 40}} />
-            <h2 style={{ fontSize: 28, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 16 }}>Zona de personas usuarias</h2>
+            <h2 style={{ fontSize: 28, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 16 }}>Zona exclusiva para socios</h2>
             <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, lineHeight: 1.7 }}>Accedé al catálogo de variedades disponibles, solicitá tus retiros y consultá el estado de tus pedidos.</p>
           </div>
         </div>
@@ -617,7 +318,7 @@ function LoginSocios({ onLogin }) {
         <div style={{ width: "100%", maxWidth: 400 }}>
           {isMobile && <img src="/logo.png" alt="Cogollos" style={{ height: 44, marginBottom: 32 }} />}
           <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 8 }}>Ingresar</h1>
-          <p style={{ color: C.muted, fontSize: 14, marginBottom: 32 }}>Ingresá tu DNI para acceder.</p>
+          <p style={{ color: C.muted, fontSize: 14, marginBottom: 32 }}>Ingresá tu DNI para acceder al catálogo.</p>
 
           <form onSubmit={verificar}>
             <div style={{ marginBottom: 20 }}>
@@ -628,14 +329,14 @@ function LoginSocios({ onLogin }) {
               <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "12px 16px", color: "#991B1B", fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>
                 {error}
                 {error.includes("pendiente") && <div style={{ marginTop: 8 }}><a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: "#991B1B", fontWeight: 700 }}>Consultar por WhatsApp →</a></div>}
-                {error.includes("no figura") && <div style={{ marginTop: 8 }}><button type="button" onClick={() => window.location.hash = "#/asociarse"} style={{ background: "none", border: "none", color: "#991B1B", fontWeight: 700, cursor: "pointer", fontFamily: F, padding: 0, fontSize: 13 }}>Quiero vincularme →</button></div>}
+                {error.includes("no figura") && <div style={{ marginTop: 8 }}><button type="button" onClick={() => window.location.hash = "#/asociarse"} style={{ background: "none", border: "none", color: "#991B1B", fontWeight: 700, cursor: "pointer", fontFamily: F, padding: 0, fontSize: 13 }}>Quiero asociarme →</button></div>}
               </div>
             )}
             <button type="submit" disabled={loading || !dni.trim()} style={{ ...btnGreen, width: "100%", padding: 14, fontSize: 15, opacity: !dni.trim() ? 0.5 : 1 }}>{loading ? "Verificando..." : "Acceder"}</button>
           </form>
 
           <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 10 }}>
-            <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: C.light, color: C.dark, border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: F }}>Quiero vincularme</button>
+            <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: C.light, color: C.dark, border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: F }}>Quiero asociarme</button>
             <button onClick={() => window.location.hash = ""} style={{ background: "transparent", color: C.muted, border: "none", fontSize: 13, cursor: "pointer", fontFamily: F, padding: "8px" }}>← Volver al sitio</button>
           </div>
         </div>
@@ -646,9 +347,9 @@ function LoginSocios({ onLogin }) {
 
 // ─── LANDING INSTITUCIONAL ───────────────────────────────────────────
 const PASOS = [
-  { num: "01", titulo: "Alta en Mi Argentina y REPROCANN", desc: "Creá tu cuenta en Mi Argentina y completá el alta en REPROCANN siguiendo el instructivo. Una vez hecho, sacá una captura de pantalla en REPROCANN donde figuren tus datos y tu código de vinculación.", link: "#/instructivo", linkText: "Ver instructivo →" },
-  { num: "02", titulo: "Cita médica", desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación. Se te asignará un turno para hablar con la persona profesional (horario a convenir). La cita tiene un costo de $30.000.", link: "https://forms.gle/X9SG4XBE1ExAbSXU9", linkText: "Completar formulario →" },
-  { num: "03", titulo: "Vinculación en Cannalizar", desc: "Con los datos del equipo médico, completás la vinculación en la plataforma Cannalizar. Una vez aprobada, podés empezar a retirar.", link: "https://app.cannalizar.com.ar/invite-patient?&referal=1687099523011x992708761737770400", linkText: "Ir a Cannalizar →" },
+  { num: "01", titulo: "Alta en REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente, tipo de cultivo Otro, y copiá tu código de vinculación.", link: "https://reprocann.msal.gob.ar/" },
+  { num: "02", titulo: "Consulta médica", desc: "Coordinamos un turno virtual con nuestro director médico. La consulta es necesaria para completar tu vinculación y comenzar a retirar.", link: "https://forms.gle/5USo1C2WcBGeG9Qz5" },
+  { num: "03", titulo: "Vinculación a Cogollos", desc: "El equipo médico te guía para completar la vinculación en Cannalizar. Una vez aprobada, sos parte de la asociación y podés retirar.", link: "https://app.cannalizar.com.ar/invite-patient?referal=1687099523011x992708761737770400" },
 ];
 
 function Landing() {
@@ -678,21 +379,21 @@ function Landing() {
           </button>
         ) : (
           <div style={{ marginLeft: "auto", display: "flex", gap: 24, alignItems: "center" }}>
-            {[["Sobre Cogollos","nosotros"],["Cómo funciona","como-funciona"],["Vincularse","asociarse"],["Autocultivo","#/autocultivo"]].map(([l,id]) => (
+            {[["Nosotros","nosotros"],["Cómo funciona","como-funciona"],["Asociarse","asociarse"],["Autocultivo","#/autocultivo"]].map(([l,id]) => (
               <button key={id} onClick={() => id.startsWith("#") ? window.location.hash = id : scrollTo(id)} style={{ background: "none", border: "none", color: C.body, cursor: "pointer", fontSize: 15, fontFamily: F, fontWeight: 500 }}>{l}</button>
             ))}
-            <button onClick={() => window.location.hash = "#/usuarias"} style={{ background: C.dark, color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontFamily: F, fontWeight: 700, fontSize: 14 }}>Acceder</button>
+            <button onClick={() => window.location.hash = "#/socios"} style={{ background: C.dark, color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontFamily: F, fontWeight: 700, fontSize: 14 }}>Acceder como socio</button>
           </div>
         )}
       </nav>
 
       {isMobile && menuOpen && (
         <div style={{ position: "fixed", top: 64, left: 0, right: 0, zIndex: 99, background: C.white, borderBottom: `1px solid ${C.border}`, padding: "16px 6%", display: "flex", flexDirection: "column", gap: 4, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
-          {[["Sobre Cogollos","nosotros"],["Cómo funciona","como-funciona"],["Vincularse","asociarse"]].map(([l,id]) => (
+          {[["Nosotros","nosotros"],["Cómo funciona","como-funciona"],["Asociarse","asociarse"]].map(([l,id]) => (
             <button key={id} onClick={() => scrollTo(id)} style={{ background: "none", border: "none", color: C.body, cursor: "pointer", fontSize: 16, fontFamily: F, fontWeight: 500, padding: "12px 0", textAlign: "left", borderBottom: `1px solid ${C.border}` }}>{l}</button>
           ))}
-          <button onClick={() => { setMenuOpen(false); window.location.hash = "#/usuarias"; }} style={{ ...btnGreen, marginTop: 8, padding: 14 }}>Acceder</button>
-          <button onClick={() => { setMenuOpen(false); window.location.hash = "#/asociarse"; }} style={{ background: C.light, color: C.dark, border: "none", borderRadius: 10, padding: 14, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: F }}>Quiero vincularme</button>
+          <button onClick={() => { setMenuOpen(false); window.location.hash = "#/socios"; }} style={{ ...btnGreen, marginTop: 8, padding: 14 }}>Acceder como socio</button>
+          <button onClick={() => { setMenuOpen(false); window.location.hash = "#/asociarse"; }} style={{ background: C.light, color: C.dark, border: "none", borderRadius: 10, padding: 14, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: F }}>Quiero asociarme</button>
         </div>
       )}
 
@@ -705,11 +406,11 @@ function Landing() {
               Cannabis medicinal<br /><span style={{ color: C.green }}>legal y de calidad</span><br />en Córdoba
             </h1>
             <p style={{ color: C.body, fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 36, maxWidth: 480 }}>
-              Somos la primera asociación cannábica de Argentina, fundada en 2001. Cultivamos cannabis medicinal para las personas vinculadas de forma legal, a través del sistema REPROCANN.
+              La primera asociación cannábica de Argentina, fundada en 2001. Solo pagás lo que retirás, sin cuotas ni inscripción.
             </p>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
-              <button onClick={() => window.location.hash = "#/asociarse"} style={{ ...btnGreen, padding: isMobile ? "13px 22px" : "14px 28px", fontSize: isMobile ? 14 : 15, width: isMobile ? "100%" : "auto" }}>Quiero vincularme</button>
-              <button onClick={() => window.location.hash = "#/usuarias"} style={{ background: "transparent", color: C.green, border: `2px solid ${C.green}`, borderRadius: 10, padding: isMobile ? "13px 22px" : "14px 28px", fontFamily: F, fontWeight: 700, fontSize: isMobile ? 14 : 15, cursor: "pointer", width: isMobile ? "100%" : "auto" }}>Ingresar →</button>
+              <button onClick={() => window.location.hash = "#/asociarse"} style={{ ...btnGreen, padding: isMobile ? "13px 22px" : "14px 28px", fontSize: isMobile ? 14 : 15, width: isMobile ? "100%" : "auto" }}>Quiero asociarme</button>
+              <button onClick={() => window.location.hash = "#/socios"} style={{ background: "transparent", color: C.green, border: `2px solid ${C.green}`, borderRadius: 10, padding: isMobile ? "13px 22px" : "14px 28px", fontFamily: F, fontWeight: 700, fontSize: isMobile ? 14 : 15, cursor: "pointer", width: isMobile ? "100%" : "auto" }}>Soy socio →</button>
             </div>
             <div style={{ display: "flex", gap: isMobile ? 24 : 40, flexWrap: "wrap" }}>
               {[["2001","Fundación"],["REPROCANN","Habilitados"],["5","Variedades propias"]].map(([n,l]) => (
@@ -731,13 +432,13 @@ function Landing() {
           <div style={{ maxWidth: 680, marginBottom: 48 }}>
             <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>QUIÉNES SOMOS</div>
             <h2 style={{ fontSize: "clamp(24px,3.5vw,40px)", fontWeight: 700, color: C.text, marginBottom: 20, lineHeight: 1.2 }}>La primera asociación cannábica de Argentina</h2>
-            <p style={{ color: C.body, fontSize: isMobile ? 14 : 16, lineHeight: 1.8 }}>Cogollos Córdoba fue fundada en 2001 por cultivadores y activistas que trabajaban por la despenalización del cannabis y el reconocimiento de sus usos terapéuticos. Desde la sanción de la ley REPROCANN, somos una ONG habilitada para cultivar cannabis medicinal para nuestros socios.</p>
+            <p style={{ color: C.body, fontSize: isMobile ? 14 : 16, lineHeight: 1.8 }}>Somos activistas, cultivadoras/es y profesionales de la salud que trabajamos por los derechos de las personas usuarias de cannabis y el reconocimiento de sus usos terapéuticos y de uso adulto responsable. Desde la sanción de la ley 27.350, somos una ONG habilitada para cultivar cannabis medicinal para nuestras personas vinculadas. Sin membresía mensual, sin costo de inscripción.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px,1fr))", gap: 16 }}>
             {[
               { titulo: "Edith 'La Negra' Moreno", texto: "Pionera en la lucha por los derechos de personas con VIH y el uso terapéutico del cannabis. Motor fundacional de Cogollos Córdoba y figura histórica del movimiento cannábico argentino." },
               { titulo: "Investigación con INTA", texto: "Trabajamos junto al Instituto Nacional de Tecnología Agropecuaria en el mejoramiento genético de nuestras variedades, para garantizar la mayor calidad posible." },
-              { titulo: "Habilitación legal", texto: "Asociación Civil inscripta (Res. IPJ 207 C/21, CUIT 30-71728612-6), habilitada por REPROCANN. Cultivamos legalmente para las personas vinculadas." },
+              { titulo: "Habilitación legal", texto: "Asociación Civil inscripta (Res. IPJ 207 C/21, CUIT 30-71728612-6), habilitada por REPROCANN. Cultivamos legalmente para nuestros socios vinculados." },
             ].map(card => (
               <div key={card.titulo} style={{ background: C.pale, borderRadius: 12, padding: "28px 24px", border: `1px solid ${C.border}` }}>
                 <div style={{ width: 4, height: 32, background: C.green, borderRadius: 4, marginBottom: 20 }} />
@@ -755,13 +456,13 @@ function Landing() {
           <div style={{ maxWidth: 600, marginBottom: 48 }}>
             <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>CÓMO FUNCIONA</div>
             <h2 style={{ fontSize: "clamp(24px,3.5vw,40px)", fontWeight: 700, color: C.text, marginBottom: 16, lineHeight: 1.2 }}>El cannabis lo cultivamos nosotros, vos lo retirás</h2>
-            <p style={{ color: C.body, fontSize: isMobile ? 14 : 15, lineHeight: 1.7 }}>No es una compra ni una venta. Somos una asociación que cultiva en nombre de sus socios dentro del marco legal de REPROCANN. Cada persona vinculada retira su parte de la producción colectiva.</p>
+            <p style={{ color: C.body, fontSize: isMobile ? 14 : 15, lineHeight: 1.7 }}>No es una compra ni una venta. Somos una asociación que cultiva en nombre de sus socios dentro del marco legal de REPROCANN. Cada socio retira su parte de la producción colectiva.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 24, marginBottom: 48 }}>
             {[
               { icon: "📋", titulo: "Marco legal", desc: "Todo funciona dentro del registro REPROCANN del Ministerio de Salud. La vinculación a nuestra ONG es el mecanismo legal que habilita el cultivo colectivo." },
-              { icon: "🌱", titulo: "Cultivo colectivo", desc: "Nuestro equipo cultiva las variedades medicinales en nombre de las personas vinculadas. Garantizamos calidad, trazabilidad y continuidad de la producción." },
-              { icon: "📦", titulo: "Retiro programado", desc: "Las personas vinculadas retiran su flor seca los lunes, miércoles y viernes. El retiro se coordina con al menos un día de anticipación." },
+              { icon: "🌱", titulo: "Cultivo colectivo", desc: "Nuestro equipo cultiva las variedades medicinales en nombre de los socios vinculados. Garantizamos calidad, trazabilidad y continuidad de la producción." },
+              { icon: "📦", titulo: "Retiro programado", desc: "Los socios retiran su flor seca los lunes, miércoles y viernes. El retiro se coordina con al menos un día de anticipación." },
             ].map(item => (
               <div key={item.titulo} style={{ background: C.white, borderRadius: 12, padding: "28px 24px", border: `1px solid ${C.border}` }}>
                 <div style={{ fontSize: 32, marginBottom: 16 }}>{item.icon}</div>
@@ -787,11 +488,7 @@ function Landing() {
                 <div style={{ fontSize: 40, fontWeight: 700, color: "rgba(255,255,255,0.12)", marginBottom: 16, lineHeight: 1 }}>{paso.num}</div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 12 }}>{paso.titulo}</h3>
                 <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>{paso.desc}</p>
-                {paso.link.startsWith("#") ? (
-                  <button onClick={() => window.location.hash = paso.link} style={{ background: "none", border: "none", color: "#6FD67F", fontSize: 13, fontWeight: 700, borderBottom: "1px solid rgba(111,214,127,0.4)", paddingBottom: 2, cursor: "pointer", fontFamily: F, padding: 0 }}>{paso.linkText || "Ver →"}</button>
-                ) : (
-                  <a href={paso.link} target="_blank" rel="noreferrer" style={{ display: "inline-block", color: "#6FD67F", fontSize: 13, fontWeight: 700, borderBottom: "1px solid rgba(111,214,127,0.4)", paddingBottom: 2 }}>{paso.linkText || "Ir al sitio →"}</a>
-                )}
+                <a href={paso.link} target="_blank" rel="noreferrer" style={{ display: "inline-block", color: "#6FD67F", fontSize: 13, fontWeight: 700, borderBottom: "1px solid rgba(111,214,127,0.4)", paddingBottom: 2 }}>Ir al sitio →</a>
               </div>
             ))}
           </div>
@@ -813,7 +510,7 @@ function Landing() {
             </div>
             <div>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, marginBottom: 16 }}>Navegación</div>
-              {[["Inicio","inicio"],["Sobre Cogollos","nosotros"],["Cómo funciona","como-funciona"],["Vincularse","asociarse"]].map(([l,id]) => (
+              {[["Inicio","inicio"],["Nosotros","nosotros"],["Cómo funciona","como-funciona"],["Asociarse","asociarse"]].map(([l,id]) => (
                 <div key={id} style={{ marginBottom: 8 }}><button onClick={() => document.getElementById(id)?.scrollIntoView({behavior:"smooth"})} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.55)", cursor: "pointer", fontSize: 13, fontFamily: F, padding: 0 }}>{l}</button></div>
               ))}
             </div>
@@ -937,7 +634,7 @@ function PortalMedico({ onLogout }) {
       ...s, ...form,
       estado: form.consulta_realizada ? "activo" : s.estado
     } : s));
-    showToast(form.consulta_realizada ? "Consulta registrada — persona usuaria activada" : "Notas guardadas");
+    showToast(form.consulta_realizada ? "Consulta registrada — socio activado" : "Notas guardadas");
     setEditando(null);
     setSaving(false);
   };
@@ -1049,7 +746,7 @@ function PortalMedico({ onLogout }) {
                 <input type="checkbox" checked={form.consulta_realizada} onChange={e => setForm(f => ({...f, consulta_realizada: e.target.checked}))} style={{ width: 18, height: 18, accentColor: C.dark }} />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Marcar consulta como realizada</div>
-                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Activa automáticamente a la persona usuaria para que pueda retirar</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Activa automáticamente al socio para que pueda retirar</div>
                 </div>
               </label>
               <div style={{ display: "flex", gap: 10 }}>
@@ -1080,8 +777,8 @@ function Autocultivo() {
   const faqs = [
     { q: "¿Cuántas plantas puedo tener?", r: "Con REPROCANN como autocultivador podés tener hasta 9 plantas de cannabis." },
     { q: "¿Necesito ser médico para registrarme?", r: "No, pero sí necesitás el aval de un médico que certifique tu uso terapéutico." },
-    { q: "¿Puedo hacer autocultivo y también ser socio de Cogollos?", r: "Sí, pero en ese caso tu REPROCANN se vincula a nuestra ONG como cultivadora/or colectiva/o, no como autocultivadora/or individual. Son dos modalidades distintas." },
-    { q: "¿Qué pasa si ya tengo REPROCANN como autocultivadora/or y quiero vincularme?", r: "Hay dos caminos: convenio bilateral entre tu registro y nuestra ONG, o dar de baja el autocultivo y reiniciar vinculada/o a Cogollos. En ambos casos necesitás una consulta médica con nuestra dirección médica." },
+    { q: "¿Puedo hacer autocultivo y también ser socio de Cogollos?", r: "Sí, pero en ese caso tu REPROCANN se vincula a nuestra ONG como cultivador colectivo, no como autocultivador individual. Son dos modalidades distintas." },
+    { q: "¿Qué pasa si ya tengo REPROCANN como autocultivador y quiero asociarme?", r: "Hay dos caminos: convenio bilateral entre tu registro y nuestra ONG, o dar de baja el autocultivo y reiniciar vinculado a Cogollos. En ambos casos necesitás una consulta médica con nuestro director." },
   ];
 
   return (
@@ -1140,92 +837,8 @@ function Autocultivo() {
       {/* CTA */}
       <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.dark, textAlign: "center" }}>
         <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: "#fff", marginBottom: 16 }}>¿Preferís no cultivar vos mismo?</h2>
-        <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, marginBottom: 32, maxWidth: 480, margin: "0 auto 32px" }}>Al vincularte a Cogollos, el equipo cultiva por vos. Retirás tu flor seca sin preocuparte por el cultivo.</p>
-        <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: "#6FD67F", color: C.text, border: "none", borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Quiero vincularme a Cogollos</button>
-      </div>
-
-      <footer style={{ background: "#000", padding: "24px 6%", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>© 2026 Asociación Civil Cogollos Córdoba</span>
-        <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>WhatsApp: +54 9 3518 05-7172</a>
-      </footer>
-    </div>
-  );
-}
-
-
-// ─── INSTRUCTIVO DE VINCULACIÓN ──────────────────────────────────────
-function Instructivo() {
-  const isMobile = useIsMobile();
-
-  const pasos = [
-    {
-      num: "01",
-      titulo: "Alta en Mi Argentina y REPROCANN",
-      desc: "Creá tu cuenta en Mi Argentina y completá el alta en REPROCANN siguiendo el instructivo paso a paso. Una vez hecho, sacá una captura de pantalla en REPROCANN donde figuren tus datos y tu código de vinculación.",
-      link: "https://drive.google.com/file/d/1roZXdQkHhDCQ5zl5FxjyJ3KJF0C6EAo0/view?usp=drive_link",
-      linkText: "Ver instructivo →",
-    },
-    {
-      num: "02",
-      titulo: "Cita médica",
-      desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación. Se te asignará un turno para conversar con la persona profesional (horario a convenir). La cita tiene un costo de $30.000.",
-      link: "https://forms.gle/X9SG4XBE1ExAbSXU9",
-      linkText: "Completar formulario →",
-    },
-    {
-      num: "03",
-      titulo: "Vinculación en Cannalizar",
-      desc: "Con los datos del equipo médico, completás la vinculación en la plataforma Cannalizar. Una vez aprobada, podés empezar a retirar tu flor seca.",
-      link: "https://app.cannalizar.com.ar/invite-patient?&referal=1687099523011x992708761737770400",
-      linkText: "Ir a Cannalizar →",
-    },
-  ];
-
-  return (
-    <div style={{ fontFamily: F, color: C.text, background: C.cream }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } html { scroll-behavior: smooth; }`}</style>
-
-      <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30, cursor: "pointer" }} onClick={() => window.location.hash = ""} />
-        <button onClick={() => window.location.hash = ""} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>← Inicio</button>
-      </div>
-
-      {/* Hero */}
-      <div style={{ background: `linear-gradient(160deg, ${C.dark} 0%, #2B7A3E 100%)`, padding: isMobile ? "60px 6% 50px" : "80px 6% 70px" }}>
-        <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
-          <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 24 }}>CÓMO VINCULARSE</div>
-          <h1 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>El proceso de vinculación a Cogollos</h1>
-          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 32 }}>Todo el proceso lleva entre 1 y 2 semanas. Te acompañamos en cada paso.</p>
-          <a href="https://forms.gle/X9SG4XBE1ExAbSXU9" target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Empezar ahora →</a>
-        </div>
-      </div>
-
-      {/* Pasos */}
-      <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.white }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: C.text, marginBottom: 40, textAlign: "center" }}>Paso a paso</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {pasos.map((p, i) => (
-              <div key={i} style={{ display: "flex", gap: 24, alignItems: "flex-start", padding: "28px", background: C.pale, borderRadius: 14, border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 36, fontWeight: 700, color: C.border, lineHeight: 1, flexShrink: 0, minWidth: 52 }}>{p.num}</div>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 10 }}>{p.titulo}</h3>
-                  <p style={{ color: C.body, fontSize: 14, lineHeight: 1.75, marginBottom: p.link ? 16 : 0 }}>{p.desc}</p>
-                  {p.link && (
-                    <a href={p.link} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.dark, color: "#fff", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, textDecoration: "none", fontFamily: F }}>{p.linkText}</a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* CTA */}
-      <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.dark, textAlign: "center" }}>
-        <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: "#fff", marginBottom: 16 }}>¿Tenés dudas?</h2>
-        <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, maxWidth: 480, margin: "0 auto 32px" }}>Escribinos al WhatsApp y te ayudamos con cualquier consulta sobre el proceso.</p>
-        <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Escribirnos al WhatsApp</a>
+        <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, marginBottom: 32, maxWidth: 480, margin: "0 auto 32px" }}>Como socio de Cogollos, nosotros cultivamos por vos. Retirás tu flor seca sin preocuparte por el cultivo.</p>
+        <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: "#6FD67F", color: C.text, border: "none", borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Quiero asociarme a Cogollos</button>
       </div>
 
       <footer style={{ background: "#000", padding: "24px 6%", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
@@ -1244,7 +857,7 @@ export default function App() {
   const [medicaLoggedIn, setMedicaLoggedIn] = useState(() => sessionStorage.getItem("cogo_medica") === "1");
 
   useEffect(() => {
-    const titles = { "#/admin": "Panel · Cogollos", "#/usuarias": "Acceso · Cogollos", "#/medica": "Portal Médico · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/instructivo": "Cómo vincularse · Cogollos", "#/asociarse": "Asociarse · Cogollos" };
+    const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/medica": "Portal Médico · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos" };
     document.title = titles[hash] || "Cogollos Córdoba";
   }, [hash]);
 
@@ -1259,10 +872,9 @@ export default function App() {
   }
 
   if (hash === "#/asociarse") return <FormularioAlta />;
-  if (hash === "#/instructivo") return <Instructivo />;
   if (hash === "#/autocultivo") return <Autocultivo />;
 
-  if (hash === "#/usuarias") {
+  if (hash === "#/socios") {
     if (!socio) return <LoginSocios onLogin={s => setSocio(s)} />;
     return <ZonaSocios socio={socio} onLogout={() => { setSocio(null); window.location.hash = ""; }} />;
   }
