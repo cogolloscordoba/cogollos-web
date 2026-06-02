@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Dashboard from "./Dashboard";
 
 // ─── Supabase ────────────────────────────────────────────────────────
@@ -112,80 +112,6 @@ function LoginAdmin({ onLogin }) {
   );
 }
 
-// ─── CHAT BOT ────────────────────────────────────────────────────────
-async function askClaude(messages, socio) {
-  const ultimoMensaje = messages.filter(m => m.role === "user").pop();
-  const historial = messages.slice(0, -1);
-  const res = await fetch("https://cogollos.app.n8n.cloud/webhook/chat-web", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mensaje: ultimoMensaje?.content || "",
-      historial,
-      socio_id: socio.id,
-      socio_nombre: socio.nombre,
-      socio_telefono: socio.telefono || "",
-    }),
-  });
-  const text = await res.text();
-  return text || "Perdoná, hubo un error. Escribinos al WhatsApp +54 9 3518 05-7172";
-}
-
-function Chat({ socio }) {
-  const [msgs, setMsgs] = useState([
-    { role: "assistant", content: `Hola ${socio.nombre.split(" ")[0]}, soy Cogo-Bot. Podés preguntarme sobre las variedades disponibles, los turnos de retiro o lo que necesites.` }
-  ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const endRef = useRef(null);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
-
-  const send = async () => {
-    if (!input.trim() || loading) return;
-    const text = input.trim();
-    setInput("");
-    const history = [...msgs, { role: "user", content: text }];
-    setMsgs(history);
-    setLoading(true);
-    try {
-      const reply = await askClaude(history, socio);
-      setMsgs(m => [...m, { role: "assistant", content: reply }]);
-    } catch {
-      setMsgs(m => [...m, { role: "assistant", content: "Hubo un error. Escribinos directamente al WhatsApp." }]);
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
-      <div style={{ background: C.dark, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 28 }} />
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#6FD67F" }} />
-          <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}>Cogo-Bot</span>
-        </div>
-      </div>
-      <div style={{ height: 300, overflowY: "auto", padding: 16 }}>
-        {msgs.map((m, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
-            <div style={{ maxWidth: "85%", padding: "10px 14px", background: m.role === "user" ? C.dark : C.light, color: m.role === "user" ? "#fff" : C.text, borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-wrap", fontFamily: F }}>{m.content}</div>
-          </div>
-        ))}
-        {loading && (
-          <div style={{ display: "flex", gap: 4, padding: "10px 14px", background: C.light, borderRadius: "18px 18px 18px 4px", width: "fit-content" }}>
-            {[0,1,2].map(j => <div key={j} style={{ width: 6, height: 6, borderRadius: "50%", background: C.muted, animation: `bounce 1s ${j*0.2}s infinite` }} />)}
-          </div>
-        )}
-        <div ref={endRef} />
-      </div>
-      <div style={{ padding: "8px 16px 16px", display: "flex", gap: 8 }}>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Escribi tu consulta..." style={{ ...inputStyle, fontSize: 14 }} />
-        <button onClick={send} disabled={loading || !input.trim()} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", background: !input.trim() ? C.border : C.dark, cursor: !input.trim() ? "not-allowed" : "pointer", color: "#fff", fontSize: 18, flexShrink: 0 }}>→</button>
-      </div>
-    </div>
-  );
-}
-
 // ─── ZONA SOCIOS ─────────────────────────────────────────────────────
 const VARIEDADES_INFO = {
   "Sativa":  { color: "#2B7A3E", bg: "#EAF4ED" },
@@ -272,7 +198,7 @@ function ZonaSocios({ socio, onLogout }) {
 
       {/* Tabs */}
       <div style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", gap: 4 }}>
-        {[["catalogo","Catálogo"], ["mis-pedidos","Mis retiros"], ["consultas","Consultas"]].map(([id, label]) => (
+        {[["catalogo","Catálogo"], ["mis-pedidos","Mis retiros"]].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding: "14px 20px", fontSize: 14, fontWeight: tab===id ? 700 : 400, color: tab===id ? C.dark : C.muted, background: "none", border: "none", borderBottom: tab===id ? `3px solid ${C.dark}` : "3px solid transparent", cursor: "pointer", fontFamily: F }}>{label}</button>
         ))}
       </div>
@@ -392,20 +318,6 @@ function ZonaSocios({ socio, onLogout }) {
           </div>
         )}
 
-        {/* CONSULTAS */}
-        {tab === "consultas" && (
-          <div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 8 }}>Consultas</h2>
-            <p style={{ color: C.muted, fontSize: 14, marginBottom: 24 }}>Podés consultarle a Cogo-Bot sobre las variedades, turnos de retiro o cualquier duda.</p>
-            <Chat socio={socio} />
-            <div style={{ marginTop: 20, padding: "16px 20px", background: C.white, borderRadius: 12, border: `1px solid ${C.border}` }}>
-              <p style={{ color: C.muted, fontSize: 13 }}>
-                ¿Preferís hablar con una persona? WhatsApp:
-                <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: C.green, fontWeight: 700, marginLeft: 6 }}>+54 9 3518 05-7172</a>
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
