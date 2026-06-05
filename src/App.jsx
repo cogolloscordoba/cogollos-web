@@ -128,6 +128,7 @@ function ZonaSocios({ socio, onLogout }) {
   const [pedidoEnviado, setPedidoEnviado] = useState(false);
   const [turno, setTurno] = useState("lunes");
   const [metodo, setMetodo] = useState("transferencia");
+  const [modalidad, setModalidad] = useState("delivery");
   const [enviando, setEnviando] = useState(false);
   const [pedidos, setPedidos] = useState([]);
 
@@ -158,6 +159,7 @@ function ZonaSocios({ socio, onLogout }) {
           precio_unitario: Number(prod?.precio || 0),
           metodo_pago: metodo,
           turno_delivery: turno,
+          modalidad: modalidad,
           estado: "pendiente",
         }),
       });
@@ -246,9 +248,16 @@ function ZonaSocios({ socio, onLogout }) {
             {totalUnidades > 0 && !pedidoEnviado && (
               <div style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 14, padding: "24px 28px" }}>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 16 }}>Confirmar retiro</h3>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 20 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
                   <div>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Turno de retiro</label>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Modalidad</label>
+                    <select value={modalidad} onChange={e => setModalidad(e.target.value)} style={{ ...inputStyle }}>
+                      <option value="delivery">Delivery</option>
+                      <option value="retiro">Retiro en sede</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{modalidad === "retiro" ? "Día de retiro" : "Día de entrega"}</label>
                     <select value={turno} onChange={e => setTurno(e.target.value)} style={{ ...inputStyle }}>
                       <option value="lunes">Lunes</option>
                       <option value="miercoles">Miércoles</option>
@@ -266,7 +275,7 @@ function ZonaSocios({ socio, onLogout }) {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                   <div>
-                    <div style={{ fontSize: 13, color: C.muted, marginBottom: 2 }}>{totalUnidades} unidad{totalUnidades > 1 ? "es" : ""} · Retiro {turno}</div>
+                    <div style={{ fontSize: 13, color: C.muted, marginBottom: 2 }}>{totalUnidades} unidad{totalUnidades > 1 ? "es" : ""} · {modalidad === "retiro" ? "Retiro en sede" : "Delivery"} {turno}</div>
                     <div style={{ fontSize: 20, fontWeight: 700, color: C.dark }}>${totalPrecio.toLocaleString("es-AR")}</div>
                   </div>
                   <button onClick={confirmarRetiro} disabled={enviando} style={{ ...btnGreen, padding: "12px 28px" }}>{enviando ? "Enviando..." : "Confirmar retiro"}</button>
@@ -277,7 +286,7 @@ function ZonaSocios({ socio, onLogout }) {
             {pedidoEnviado && (
               <div style={{ background: C.light, border: `1.5px solid ${C.green}`, borderRadius: 14, padding: "24px 28px", textAlign: "center" }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 8 }}>Retiro solicitado</div>
-                <p style={{ color: C.body, fontSize: 14, marginBottom: 16 }}>Tu solicitud de retiro fue registrada. El equipo te va a contactar por WhatsApp para coordinar la entrega del {turno}.</p>
+                <p style={{ color: C.body, fontSize: 14, marginBottom: 16 }}>Tu solicitud fue registrada. El equipo te va a contactar por WhatsApp para coordinar {modalidad === "retiro" ? "el retiro en sede" : "la entrega"} del {turno}.</p>
                 <button onClick={() => { setPedidoEnviado(false); setTab("mis-pedidos"); }} style={{ ...btnGreen, padding: "10px 24px", fontSize: 14 }}>Ver mis retiros</button>
               </div>
             )}
