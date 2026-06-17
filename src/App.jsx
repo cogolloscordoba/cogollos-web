@@ -14,11 +14,19 @@ const sb = async (path, opts = {}) => {
   return text ? JSON.parse(text) : null;
 };
 
-// ─── Admin ───────────────────────────────────────────────────────────
-const ADMIN_USER = "C0g026IPJ";
-const ADMIN_PASS = "789996g!!#";
-const MEDICA_USER = "Medi26IPJ";
-const MEDICA_PASS = "789996g!!#";
+// ─── Login admin via Supabase Auth ──────────────────────────────────
+// El login admin ahora se valida contra Supabase Auth (servidor),
+// no contra constantes en el código.
+async function loginAdminSupabase(email, password) {
+  const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.access_token ? data : null;
+}
 
 // ─── Colores ─────────────────────────────────────────────────────────
 const C = {
@@ -72,12 +80,13 @@ function LoginAdmin({ onLogin }) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    await new Promise(r => setTimeout(r, 300));
-    if (user === ADMIN_USER && pass === ADMIN_PASS) {
+    const sesion = await loginAdminSupabase(user.trim(), pass);
+    if (sesion) {
       sessionStorage.setItem("cogo_admin", "1");
+      sessionStorage.setItem("cogo_admin_token", sesion.access_token);
       onLogin();
     } else {
-      setError("Usuario o contraseña incorrectos");
+      setError("Email o contraseña incorrectos");
     }
     setLoading(false);
   };
@@ -93,8 +102,8 @@ function LoginAdmin({ onLogin }) {
         <div style={{ background: C.white, borderRadius: 16, border: `1.5px solid ${C.border}`, padding: "36px 32px" }}>
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: 18 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Usuario</label>
-              <input value={user} onChange={e => setUser(e.target.value)} autoFocus style={inputStyle} />
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Email</label>
+              <input type="email" value={user} onChange={e => setUser(e.target.value)} autoFocus style={inputStyle} />
             </div>
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Contraseña</label>
@@ -871,237 +880,11 @@ function Landing() {
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
             <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>© 2026 Asociación Civil Cogollos Córdoba</span>
             <div style={{ display: "flex", gap: 16 }}>
-              <button onClick={() => window.location.hash = "#/medica"} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: 11, fontFamily: F }}>Portal médico</button>
               <button onClick={() => window.location.hash = "#/admin"} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: 11, fontFamily: F }}>Acceso equipo</button>
             </div>
           </div>
         </div>
       </footer>
-    </div>
-  );
-}
-
-// ─── PORTAL MÉDICO ───────────────────────────────────────────────────
-function LoginMedica({ onLogin }) {
-  const [user, setUser] = useState("");
-  const [pass, setPass] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 300));
-    if (user === MEDICA_USER && pass === MEDICA_PASS) {
-      sessionStorage.setItem("cogo_medica", "1");
-      onLogin();
-    } else {
-      setError("Credenciales incorrectas");
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, fontFamily: F, padding: "0 6%" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
-      <div style={{ width: "100%", maxWidth: 400 }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 56, marginBottom: 16 }} />
-          <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, letterSpacing: "0.1em" }}>PORTAL MÉDICO</div>
-        </div>
-        <div style={{ background: C.white, borderRadius: 16, border: `1.5px solid ${C.border}`, padding: "36px 32px" }}>
-          <form onSubmit={handleLogin}>
-            <div style={{ marginBottom: 18 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Usuario</label>
-              <input value={user} onChange={e => setUser(e.target.value)} autoFocus style={inputStyle} />
-            </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Contraseña</label>
-              <input type="password" value={pass} onChange={e => setPass(e.target.value)} style={inputStyle} />
-            </div>
-            {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", color: "#991B1B", fontSize: 13, marginBottom: 20 }}>{error}</div>}
-            <button type="submit" disabled={loading} style={{ ...btnGreen, width: "100%", padding: 14 }}>{loading ? "Ingresando..." : "Ingresar"}</button>
-          </form>
-        </div>
-        <p style={{ textAlign: "center", marginTop: 20 }}>
-          <button onClick={() => { window.location.hash = ""; }} style={{ background: "none", border: "none", color: C.green, cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 500 }}>← Volver al sitio</button>
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function PortalMedico({ onLogout }) {
-  const isMobile = useIsMobile();
-  const [socios, setSocios] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filtro, setFiltro] = useState("pendientes");
-  const [search, setSearch] = useState("");
-  const [editando, setEditando] = useState(null);
-  const [form, setForm] = useState({ fecha_consulta: "", notas_medicas: "", consulta_realizada: false });
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState("");
-
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
-
-  const load = async () => {
-    setLoading(true);
-    const data = await sb("socios?select=*&order=created_at.desc");
-    setSocios(Array.isArray(data) ? data : []);
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const abrirEditar = (s) => {
-    setEditando(s);
-    setForm({
-      fecha_consulta: s.fecha_consulta || "",
-      notas_medicas: s.notas_medicas || "",
-      consulta_realizada: s.consulta_realizada || false,
-    });
-  };
-
-  const guardar = async () => {
-    setSaving(true);
-    await sb(`socios?id=eq.${editando.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        ...form,
-        fecha_consulta: form.fecha_consulta || null,
-        // Si marcó consulta realizada, pasa a estado activo automáticamente
-        estado: form.consulta_realizada ? "activo" : editando.estado,
-      }),
-    });
-    setSocios(ss => ss.map(s => s.id === editando.id ? {
-      ...s, ...form,
-      estado: form.consulta_realizada ? "activo" : s.estado
-    } : s));
-    showToast(form.consulta_realizada ? "Consulta registrada — socio activado" : "Notas guardadas");
-    setEditando(null);
-    setSaving(false);
-  };
-
-  const filtrados = socios.filter(s => {
-    const matchFiltro = filtro === "todos" ? true : filtro === "pendientes" ? s.estado === "pendiente" && !s.consulta_realizada : filtro === "con_consulta" ? s.consulta_realizada : s.estado === "activo";
-    const q = search.toLowerCase();
-    const matchSearch = !q || s.nombre?.toLowerCase().includes(q) || s.dni?.includes(q);
-    return matchFiltro && matchSearch;
-  });
-
-  const stats = {
-    pendientes: socios.filter(s => s.estado === "pendiente" && !s.consulta_realizada).length,
-    con_consulta: socios.filter(s => s.consulta_realizada).length,
-    activos: socios.filter(s => s.estado === "activo").length,
-  };
-
-  return (
-    <div style={{ minHeight: "100vh", background: C.pale, fontFamily: F }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } input, select, textarea { font-family: inherit; }`}</style>
-
-      <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 60, position: "sticky", top: 0, zIndex: 50 }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30}} />
-        <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, marginLeft: 12 }}>Portal médico</span>
-        <button onClick={onLogout} style={{ marginLeft: "auto", background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>Salir</button>
-      </div>
-
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 4%" : "32px 6%" }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 24 }}>Agenda de consultas</h2>
-
-        {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 28 }}>
-          {[
-            ["Sin consulta", stats.pendientes, "#991B1B"],
-            ["Con consulta", stats.con_consulta, "#8C6B1A"],
-            ["Activados", stats.activos, C.green],
-          ].map(([l,v,c]) => (
-            <div key={l} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 18px" }}>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{l}</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: c }}>{v}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Filtros */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-          {[["pendientes","Sin consulta"],["con_consulta","Con consulta"],["activos","Activados"],["todos","Todos"]].map(([v,l]) => (
-            <button key={v} onClick={() => setFiltro(v)} style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: filtro===v?"none":`1px solid ${C.border}`, background: filtro===v?C.dark:C.white, color: filtro===v?"#fff":C.muted, fontFamily: F }}>{l}</button>
-          ))}
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre o DNI..." style={{ ...inputStyle, width: 200, marginLeft: "auto", fontSize: 13, padding: "8px 12px" }} />
-        </div>
-
-        {/* Lista */}
-        {loading ? <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Cargando...</div> : filtrados.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Sin resultados</div> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {filtrados.map(s => (
-              <div key={s.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: s.consulta_realizada ? C.light : "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: s.consulta_realizada ? C.dark : "#991B1B", flexShrink: 0 }}>
-                  {s.nombre?.charAt(0) || "?"}
-                </div>
-                <div style={{ flex: 1, minWidth: 180 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>{s.nombre}</div>
-                  <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <span>DNI {s.dni}</span>
-                    {s.telefono && <span>{s.telefono}</span>}
-                    {s.fecha_consulta && <span>Consulta: {new Date(s.fecha_consulta).toLocaleDateString("es-AR")}</span>}
-                    {s.notas && <span style={{ color: C.body, fontStyle: "italic" }}>{s.notas.slice(0, 60)}{s.notas.length > 60 ? "..." : ""}</span>}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: s.consulta_realizada ? C.light : s.estado === "pendiente" ? "#FAEEDA" : "#EAF3DE", color: s.consulta_realizada ? C.dark : s.estado === "pendiente" ? "#633806" : "#27500A" }}>
-                    {s.consulta_realizada ? "Consulta realizada" : s.estado}
-                  </span>
-                  <button onClick={() => abrirEditar(s)} style={{ ...btnGreen, padding: "6px 14px", fontSize: 12 }}>Registrar</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Modal editar */}
-      {editando && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}>
-            <div style={{ padding: "20px 24px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.border}` }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{editando.nombre}</div>
-                <div style={{ fontSize: 12, color: C.muted }}>DNI {editando.dni} · {editando.telefono}</div>
-              </div>
-              <button onClick={() => setEditando(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: C.muted }}>×</button>
-            </div>
-            <div style={{ padding: 24 }}>
-              {editando.notas && (
-                <div style={{ background: C.pale, borderRadius: 8, padding: "12px 14px", marginBottom: 20, fontSize: 13, color: C.body, lineHeight: 1.6 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Nota del socio</div>
-                  {editando.notas}
-                </div>
-              )}
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Fecha de consulta</label>
-                <input type="date" value={form.fecha_consulta} onChange={e => setForm(f => ({...f, fecha_consulta: e.target.value}))} style={inputStyle} />
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Notas médicas</label>
-                <textarea value={form.notas_medicas} onChange={e => setForm(f => ({...f, notas_medicas: e.target.value}))} style={{ ...inputStyle, minHeight: 90, resize: "vertical" }} placeholder="Observaciones de la consulta..." />
-              </div>
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 24, padding: "14px 16px", background: form.consulta_realizada ? C.light : C.pale, borderRadius: 10, border: `1.5px solid ${form.consulta_realizada ? C.green : C.border}` }}>
-                <input type="checkbox" checked={form.consulta_realizada} onChange={e => setForm(f => ({...f, consulta_realizada: e.target.checked}))} style={{ width: 18, height: 18, accentColor: C.dark }} />
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Marcar consulta como realizada</div>
-                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Activa automáticamente al socio para que pueda retirar</div>
-                </div>
-              </label>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => setEditando(null)} style={{ flex: 1, background: "transparent", color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 13, fontSize: 14, cursor: "pointer", fontFamily: F }}>Cancelar</button>
-                <button onClick={guardar} disabled={saving} style={{ ...btnGreen, flex: 2, padding: 13 }}>{saving ? "Guardando..." : "Guardar"}</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {toast && <div style={{ position: "fixed", bottom: 24, right: 24, background: C.dark, color: "#fff", padding: "10px 20px", borderRadius: 10, fontSize: 13, fontFamily: F, zIndex: 9999 }}>{toast}</div>}
     </div>
   );
 }
@@ -1197,21 +980,15 @@ export default function App() {
   const hash = useHash();
   const [socio, setSocio] = useState(null);
   const [adminLoggedIn, setAdminLoggedIn] = useState(() => sessionStorage.getItem("cogo_admin") === "1");
-  const [medicaLoggedIn, setMedicaLoggedIn] = useState(() => sessionStorage.getItem("cogo_medica") === "1");
 
   useEffect(() => {
-    const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/medica": "Portal Médico · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos" };
+    const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos" };
     document.title = titles[hash] || "Cogollos Córdoba";
   }, [hash]);
 
   if (hash === "#/admin") {
     if (!adminLoggedIn) return <LoginAdmin onLogin={() => setAdminLoggedIn(true)} />;
     return <Dashboard onLogout={() => { sessionStorage.removeItem("cogo_admin"); setAdminLoggedIn(false); window.location.hash = ""; }} />;
-  }
-
-  if (hash === "#/medica") {
-    if (!medicaLoggedIn) return <LoginMedica onLogin={() => setMedicaLoggedIn(true)} />;
-    return <PortalMedico onLogout={() => { sessionStorage.removeItem("cogo_medica"); setMedicaLoggedIn(false); window.location.hash = ""; }} />;
   }
 
   if (hash === "#/asociarse") return <FormularioAlta />;
