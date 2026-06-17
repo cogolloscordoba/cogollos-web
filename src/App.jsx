@@ -498,7 +498,6 @@ function FormularioAlta() {
 // ─── LOGIN SOCIOS (DNI) ───────────────────────────────────────────────
 // ─── LOGIN SOCIOS (DNI + mes nac + ciudad, validado en el servidor) ──
 function LoginSocios({ onLogin }) {
-  const isMobile = useIsMobile();
   const [paso, setPaso] = useState("dni"); // dni | verificar
   const [dni, setDni] = useState("");
   const [mes, setMes] = useState("");
