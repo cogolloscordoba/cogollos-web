@@ -3,7 +3,7 @@ import Dashboard from "./Dashboard";
 
 // ─── Supabase ────────────────────────────────────────────────────────
 const SB_URL = "https://mphiidkjfjxcqrrfbpfu.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1waGlpZGtqZmp4Y3FycmZicGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NzczMzIsImV4cCI6MjA5NDM1MzMzMn0.ons8D67XR92jlpCb-ORTBeqbFVcgozQy4Zqpd8s7hlI";
+const SB_KEY = "sb_publishable_sKq0rU3ft8rEHCO8MeF0Kg_ciDXTfpz";
 const sb = async (path, opts = {}) => {
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
     ...opts,
