@@ -367,8 +367,12 @@ function FormularioAlta() {
     setLoading(true);
     setError("");
     try {
-      const existente = await sb(`socios?dni=eq.${form.dni}&select=id,estado`);
-      if (existente?.length > 0) {
+      const existente = await sb("rpc/dni_existe", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ p_dni: form.dni.trim() }),
+      });
+      if (existente === true) {
         setError("Ya existe un registro con ese DNI. Si creés que es un error, escribinos al WhatsApp.");
         setLoading(false);
         return;
@@ -492,183 +496,113 @@ function FormularioAlta() {
 }
 
 // ─── LOGIN SOCIOS (DNI) ───────────────────────────────────────────────
+// ─── LOGIN SOCIOS (DNI + mes nac + ciudad, validado en el servidor) ──
 function LoginSocios({ onLogin }) {
   const isMobile = useIsMobile();
-  const [paso, setPaso] = useState("dni"); // dni | preguntas
+  const [paso, setPaso] = useState("dni"); // dni | verificar
   const [dni, setDni] = useState("");
+  const [mes, setMes] = useState("");
+  const [ciudad, setCiudad] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [socioData, setSocioData] = useState(null);
-  const [preguntas, setPreguntas] = useState([]);
-  const [respuestas, setRespuestas] = useState({});
   const [intentos, setIntentos] = useState(0);
 
   const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-  const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
-  // Genera 2 preguntas de seguridad con los datos reales del socio
-  const generarPreguntas = (s) => {
-    const posibles = [];
-
-    // Pregunta: mes de nacimiento
-    if (s.fecha_nacimiento) {
-      const mesReal = new Date(s.fecha_nacimiento + "T00:00:00").getMonth(); // 0-11
-      const opcionesIdx = shuffle([...Array(12).keys()].filter(i => i !== mesReal)).slice(0, 3);
-      const opciones = shuffle([mesReal, ...opcionesIdx]).map(i => MESES[i]);
-      posibles.push({ id: "mes_nac", pregunta: "¿En qué mes naciste?", opciones, correcta: MESES[mesReal] });
+  // Paso 1: solo valida que el DNI tenga formato; no consulta la base todavía.
+  const seguirDni = (e) => {
+    e.preventDefault();
+    setError("");
+    if (!/^\d{7,8}$/.test(dni.trim())) {
+      setError("Ingresá un DNI válido (7 u 8 dígitos).");
+      return;
     }
-
-    // Pregunta: últimos 3 dígitos del teléfono
-    if (s.telefono && s.telefono.replace(/\D/g, "").length >= 3) {
-      const tel = s.telefono.replace(/\D/g, "");
-      const real = tel.slice(-3);
-      const fakes = new Set();
-      while (fakes.size < 3) {
-        const f = String(Math.floor(Math.random() * 900) + 100);
-        if (f !== real) fakes.add(f);
-      }
-      const opciones = shuffle([real, ...fakes]);
-      posibles.push({ id: "tel", pregunta: "¿Cuáles son los últimos 3 dígitos de tu teléfono?", opciones, correcta: real });
-    }
-
-    // Pregunta: ciudad
-    if (s.ciudad) {
-      const ciudadesFalsas = ["Villa María","Río Cuarto","Alta Gracia","Carlos Paz","Jesús María","San Francisco","Bell Ville","Cosquín"].filter(c => c.toLowerCase() !== s.ciudad.toLowerCase());
-      const opciones = shuffle([s.ciudad, ...shuffle(ciudadesFalsas).slice(0, 3)]);
-      posibles.push({ id: "ciudad", pregunta: "¿En qué ciudad vivís?", opciones, correcta: s.ciudad });
-    }
-
-    // Elegimos 2 preguntas al azar de las disponibles
-    return shuffle(posibles).slice(0, 2);
+    setPaso("verificar");
   };
 
-  const buscarDni = async (e) => {
+  // Paso 2: valida DNI + mes + ciudad TODO en el servidor (RPC login_socio).
+  // La ficha del socio solo vuelve si las tres coinciden.
+  const verificar = async (e) => {
     e.preventDefault();
-    if (!dni.trim()) return;
+    if (!mes || !ciudad.trim()) {
+      setError("Completá el mes de nacimiento y la ciudad.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
-      const data = await sb(`socios?dni=eq.${dni.trim()}&select=*`);
-      if (!data || data.length === 0) {
-        setError("El DNI ingresado no figura en nuestro registro.");
-        setLoading(false);
+      const data = await sb("rpc/login_socio", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          p_dni: dni.trim(),
+          p_mes: Number(mes),
+          p_ciudad: ciudad.trim(),
+        }),
+      });
+      if (Array.isArray(data) && data.length > 0) {
+        onLogin(data[0]);
         return;
       }
-      const socio = data[0];
-      if (socio.estado === "pendiente") {
-        setError("Tu solicitud está pendiente de aprobación. El equipo te va a contactar pronto.");
-        setLoading(false);
-        return;
+      // No coincide: no revelamos si falló el DNI, el mes o la ciudad.
+      const n = intentos + 1;
+      setIntentos(n);
+      if (n >= 4) {
+        setError("Demasiados intentos. Si no podés acceder, escribinos al WhatsApp +54 9 3518 05-7172.");
+      } else {
+        setError("Los datos no coinciden con un socio activo. Revisá e intentá de nuevo.");
       }
-      if (socio.estado !== "activo") {
-        setError("Tu acceso no está activo. Escribinos al WhatsApp para regularizar.");
-        setLoading(false);
-        return;
-      }
-      const pregs = generarPreguntas(socio);
-      if (pregs.length < 2) {
-        // No hay datos suficientes para verificar: dejamos entrar solo con DNI (fallback)
-        onLogin(socio);
-        return;
-      }
-      setSocioData(socio);
-      setPreguntas(pregs);
-      setRespuestas({});
-      setPaso("preguntas");
-    } catch (e) {
-      setError("Hubo un error. Intentá de nuevo.");
+    } catch (err) {
+      setError("Hubo un error. Intentá de nuevo en unos minutos.");
     }
     setLoading(false);
   };
 
-  const verificarPreguntas = (e) => {
-    e.preventDefault();
-    const todasOk = preguntas.every(p => respuestas[p.id] === p.correcta);
-    if (todasOk) {
-      onLogin(socioData);
-    } else {
-      const nuevoIntento = intentos + 1;
-      setIntentos(nuevoIntento);
-      if (nuevoIntento >= 3) {
-        setError("Demasiados intentos fallidos. Escribinos al WhatsApp para acceder.");
-        setPaso("dni");
-        setIntentos(0);
-        setSocioData(null);
-      } else {
-        setError(`Respuestas incorrectas. Te quedan ${3 - nuevoIntento} intento${3 - nuevoIntento > 1 ? "s" : ""}.`);
-        // Regenerar preguntas para el siguiente intento
-        setPreguntas(generarPreguntas(socioData));
-        setRespuestas({});
-      }
-    }
-  };
-
   return (
-    <div style={{ minHeight: "100vh", display: "flex", fontFamily: F }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, fontFamily: F, padding: "0 6%" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
-
-      {!isMobile && (
-        <div style={{ width: "45%", background: C.dark, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "48px", position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 30% 70%, rgba(43,122,62,0.4) 0%, transparent 60%)" }} />
-          <div style={{ position: "relative" }}>
-            <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 56, marginBottom: 40}} />
-            <h2 style={{ fontSize: 28, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 16 }}>Zona de personas usuarias</h2>
-            <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, lineHeight: 1.7 }}>Accedé al catálogo de variedades disponibles, solicitá tus retiros y consultá el estado de tus pedidos.</p>
-          </div>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 56, marginBottom: 16 }} />
+          <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, letterSpacing: "0.1em" }}>ACCESO SOCIOS</div>
         </div>
-      )}
-
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, padding: isMobile ? "32px 6%" : "48px" }}>
-        <div style={{ width: "100%", maxWidth: 400 }}>
-          {isMobile && <img src="/logo.png" alt="Cogollos" style={{ height: 44, marginBottom: 32 }} />}
-
+        <div style={{ background: C.white, borderRadius: 16, border: `1.5px solid ${C.border}`, padding: "36px 32px" }}>
           {paso === "dni" && (
-            <>
-              <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 8 }}>Ingresar</h1>
-              <p style={{ color: C.muted, fontSize: 14, marginBottom: 32 }}>Ingresá tu DNI para acceder al catálogo.</p>
-              <form onSubmit={buscarDni}>
-                <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tu DNI</label>
-                  <input value={dni} onChange={e => setDni(e.target.value)} placeholder="Ej: 25666777" autoFocus style={{ ...inputStyle, fontSize: 18, letterSpacing: "0.05em" }} />
-                </div>
-                {error && (
-                  <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "12px 16px", color: "#991B1B", fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>
-                    {error}
-                    {error.includes("pendiente") && <div style={{ marginTop: 8 }}><a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: "#991B1B", fontWeight: 700 }}>Consultar por WhatsApp →</a></div>}
-                    {(error.includes("no figura") || error.includes("intentos")) && <div style={{ marginTop: 8 }}><a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: "#991B1B", fontWeight: 700 }}>Escribinos al WhatsApp →</a></div>}
-                  </div>
-                )}
-                <button type="submit" disabled={loading || !dni.trim()} style={{ ...btnGreen, width: "100%", padding: 14, fontSize: 15, opacity: !dni.trim() ? 0.5 : 1 }}>{loading ? "Verificando..." : "Continuar"}</button>
-              </form>
-              <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 10 }}>
-                <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: C.light, color: C.dark, border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: F }}>Quiero vincularme</button>
-                <button onClick={() => window.location.hash = ""} style={{ background: "transparent", color: C.muted, border: "none", fontSize: 13, cursor: "pointer", fontFamily: F, padding: "8px" }}>← Volver al sitio</button>
+            <form onSubmit={seguirDni}>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tu DNI (sin puntos)</label>
+                <input value={dni} onChange={e => setDni(e.target.value.replace(/\D/g, ""))} inputMode="numeric" autoFocus placeholder="Ej: 36235710" style={inputStyle} />
               </div>
-            </>
+              {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", color: "#991B1B", fontSize: 13, marginBottom: 20 }}>{error}</div>}
+              <button type="submit" style={{ ...btnGreen, width: "100%", padding: 14 }}>Continuar</button>
+            </form>
           )}
 
-          {paso === "preguntas" && (
+          {paso === "verificar" && (
             <>
-              <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 8 }}>Verificación</h1>
-              <p style={{ color: C.muted, fontSize: 14, marginBottom: 28 }}>Para confirmar tu identidad, respondé estas preguntas.</p>
-              <form onSubmit={verificarPreguntas}>
-                {preguntas.map(p => (
-                  <div key={p.id} style={{ marginBottom: 24 }}>
-                    <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 12 }}>{p.pregunta}</label>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                      {p.opciones.map(op => (
-                        <button key={op} type="button" onClick={() => setRespuestas(r => ({ ...r, [p.id]: op }))} style={{ padding: "12px 10px", borderRadius: 10, border: respuestas[p.id] === op ? `2px solid ${C.green}` : `1.5px solid ${C.border}`, background: respuestas[p.id] === op ? C.light : C.white, color: C.text, fontSize: 14, fontWeight: respuestas[p.id] === op ? 700 : 400, cursor: "pointer", fontFamily: F, textAlign: "center" }}>{op}</button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "12px 16px", color: "#991B1B", fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>{error}</div>}
-                <button type="submit" disabled={preguntas.some(p => !respuestas[p.id])} style={{ ...btnGreen, width: "100%", padding: 14, fontSize: 15, opacity: preguntas.some(p => !respuestas[p.id]) ? 0.5 : 1 }}>Acceder</button>
+              <p style={{ fontSize: 14, color: C.body, marginBottom: 20, lineHeight: 1.6 }}>Para confirmar tu identidad, ingresá estos datos:</p>
+              <form onSubmit={verificar}>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Mes de nacimiento</label>
+                  <select value={mes} onChange={e => setMes(e.target.value)} style={inputStyle}>
+                    <option value="">Elegí un mes...</option>
+                    {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                  </select>
+                </div>
+                <div style={{ marginBottom: 22 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Ciudad donde vivís</label>
+                  <input value={ciudad} onChange={e => setCiudad(e.target.value)} placeholder="Ej: Córdoba" style={inputStyle} />
+                </div>
+                {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", color: "#991B1B", fontSize: 13, marginBottom: 20 }}>{error}</div>}
+                <button type="submit" disabled={loading || intentos >= 4} style={{ ...btnGreen, width: "100%", padding: 14, opacity: (loading || intentos >= 4) ? 0.5 : 1 }}>{loading ? "Verificando..." : "Acceder"}</button>
               </form>
-              <button onClick={() => { setPaso("dni"); setError(""); setSocioData(null); setRespuestas({}); }} style={{ background: "transparent", color: C.muted, border: "none", fontSize: 13, cursor: "pointer", fontFamily: F, padding: "8px", marginTop: 16, width: "100%" }}>← Usar otro DNI</button>
+              <button onClick={() => { setPaso("dni"); setError(""); setMes(""); setCiudad(""); }} style={{ background: "transparent", color: C.muted, border: "none", fontSize: 13, cursor: "pointer", fontFamily: F, padding: "8px", marginTop: 16, width: "100%" }}>← Usar otro DNI</button>
             </>
           )}
         </div>
+        <p style={{ textAlign: "center", marginTop: 20, fontSize: 13 }}>
+          <button onClick={() => { window.location.hash = ""; }} style={{ background: "none", border: "none", color: C.green, cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 500 }}>← Volver al sitio</button>
+        </p>
       </div>
     </div>
   );
