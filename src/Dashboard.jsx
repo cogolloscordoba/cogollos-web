@@ -643,6 +643,7 @@ function Socios({ toast }) {
     const matchSearch = !q || s.nombre?.toLowerCase().includes(q) || s.dni?.includes(q) || s.telefono?.includes(q);
     const matchEstado =
       filtroEstado === "todos" ? true :
+      filtroEstado === "web" ? (s.origen === "web") :
       filtroEstado === "sin_consulta" ? (s.estado === "pendiente" && !s.consulta_realizada) :
       s.estado === filtroEstado;
     return matchSearch && matchEstado;
@@ -652,6 +653,7 @@ function Socios({ toast }) {
     activos: socios.filter(s => s.estado === "activo").length,
     pendientes: socios.filter(s => s.estado === "pendiente").length,
     sin_consulta: socios.filter(s => s.estado === "pendiente" && !s.consulta_realizada).length,
+    web: socios.filter(s => s.origen === "web").length,
   };
 
   const estadoColor = { activo: ["#EAF3DE","#27500A"], pendiente: ["#FAEEDA","#633806"], inactivo: ["#F1EFE8","#444441"] };
@@ -671,6 +673,7 @@ function Socios({ toast }) {
           ["activo", `Activos (${stats.activos})`],
           ["pendiente", `Pendientes (${stats.pendientes})`],
           ["sin_consulta", `Sin revisión médica (${stats.sin_consulta})`],
+          ["web", `🌐 Por web (${stats.web})`],
           ["inactivo", "Inactivos"],
         ].map(([v, l]) => (
           <button key={v} onClick={() => setFiltroEstado(v)} style={{ padding: "6px 14px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: filtroEstado === v ? "none" : `1px solid ${C.border}`, background: filtroEstado === v ? C.dark : C.white, color: filtroEstado === v ? "#fff" : C.muted, fontFamily: F }}>{l}</button>
@@ -691,6 +694,7 @@ function Socios({ toast }) {
                   <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                     <span>DNI {s.dni}</span>
                     {s.telefono && <span>{s.telefono}</span>}
+                    {s.origen === "web" && <span style={{ background: "#E6F1FB", color: "#0C447C", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>🌐 Web</span>}
                     {s.reprocann_codigo && <span style={{ color: C.green }}>REPROCANN ✓</span>}
                     {s.consulta_realizada
                       ? <span style={{ color: "#27500A", fontWeight: 600 }}>● Consulta realizada</span>

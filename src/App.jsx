@@ -391,6 +391,7 @@ function FormularioAlta() {
           codigo_postal: form.codigo_postal.trim() || null,
           cuit: form.cuit.trim() || null,
           estado: "pendiente",
+          origen: "web",
           notas: form.notas.trim() || null,
         }),
       });
@@ -570,7 +571,7 @@ function LoginSocios({ onLogin }) {
             <form onSubmit={seguirDni}>
               <div style={{ marginBottom: 20 }}>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tu DNI (sin puntos)</label>
-                <input value={dni} onChange={e => setDni(e.target.value.replace(/\D/g, ""))} inputMode="numeric" autoFocus placeholder="Ej: 36235710" style={inputStyle} />
+                <input value={dni} onChange={e => setDni(e.target.value.replace(/\D/g, ""))} inputMode="numeric" autoFocus placeholder="Ej: 44999653" style={inputStyle} />
               </div>
               {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", color: "#991B1B", fontSize: 13, marginBottom: 20 }}>{error}</div>}
               <button type="submit" style={{ ...btnGreen, width: "100%", padding: 14 }}>Continuar</button>
