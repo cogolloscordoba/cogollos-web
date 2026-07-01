@@ -642,7 +642,7 @@ function LoginSocios({ onLogin }) {
 const PASOS = [
   { num: "01", titulo: "Alta en Mi Argentina y REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente, tipo de cultivo Otro, y copiá tu código de vinculación. Sacá una captura donde figuren tus datos y tu código de vinculación y envíanosla por WhatsApp.", link: "https://reprocann.msal.gob.ar/" },
   { num: "02", titulo: "Cita médica", desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación.", link: "#/asociarse" },
-  { num: "03", titulo: "Vinculación en Cannalizar", desc: "Ya estamos cerca: completá la ficha médica y se te asignará un turno para hablar con nuestra dirección médica (horario a convenir). La cita médica tiene un costo de $80.000 — con descuento asociativo pagás $40.000.", link: "https://app.cannalizar.com.ar/invite-patient?referal=1687099523011x992708761737770400" },
+  { num: "03", titulo: "Vinculación en Cannalizar", desc: "Ya estamos cerca: completá la ficha médica y se te asignará un turno para hablar con nuestra dirección médica (horario a convenir). La cita médica tiene un costo de $80.000 — con descuento asociativo pagás $40.000." },
 ];
 
 function Landing() {
@@ -782,7 +782,7 @@ function Landing() {
                 <div style={{ fontSize: 40, fontWeight: 700, color: "rgba(255,255,255,0.12)", marginBottom: 16, lineHeight: 1 }}>{paso.num}</div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 12 }}>{paso.titulo}</h3>
                 <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>{paso.desc}</p>
-                <a href={paso.link} target="_blank" rel="noreferrer" style={{ display: "inline-block", color: "#6FD67F", fontSize: 13, fontWeight: 700, borderBottom: "1px solid rgba(111,214,127,0.4)", paddingBottom: 2 }}>Ir al sitio →</a>
+                {paso.link && <a href={paso.link} target="_blank" rel="noreferrer" style={{ display: "inline-block", color: "#6FD67F", fontSize: 13, fontWeight: 700, borderBottom: "1px solid rgba(111,214,127,0.4)", paddingBottom: 2 }}>Ir al sitio →</a>}
               </div>
             ))}
           </div>
