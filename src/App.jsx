@@ -522,71 +522,102 @@ function FormularioAlta() {
 
 // ─── LOGIN SOCIOS (DNI) ───────────────────────────────────────────────
 // ─── LOGIN SOCIOS (DNI + mes nac + ciudad, validado en el servidor) ──
+// ─── LOGIN SOCIOS (pide solo los datos que el socio tiene cargados) ──
 function LoginSocios({ onLogin }) {
   const [paso, setPaso] = useState("dni"); // dni | verificar
   const [dni, setDni] = useState("");
   const [mes, setMes] = useState("");
   const [ciudad, setCiudad] = useState("");
+  const [reqMes, setReqMes] = useState(false);     // este socio valida por mes
+  const [reqCiudad, setReqCiudad] = useState(false); // este socio valida por ciudad
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [intentos, setIntentos] = useState(0);
 
   const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-  // Paso 1: solo valida que el DNI tenga formato; no consulta la base todavía.
-  const seguirDni = (e) => {
+  // Paso 1: con el DNI, preguntamos a la base qué datos pedir para ese socio.
+  const seguirDni = async (e) => {
     e.preventDefault();
     setError("");
     if (!/^\d{7,8}$/.test(dni.trim())) {
       setError("Ingresá un DNI válido (7 u 8 dígitos).");
       return;
     }
-    setPaso("verificar");
-  };
-
-  // Paso 2: valida DNI + mes + ciudad en el servidor (RPC login_socio_v2).
-  // Distingue: datos incorrectos vs. cuenta no activa vs. acceso ok.
-  const verificar = async (e) => {
-    e.preventDefault();
-    if (!mes || !ciudad.trim()) {
-      setError("Completá el mes de nacimiento y la ciudad.");
-      return;
-    }
     setLoading(true);
-    setError("");
     try {
-      const data = await sb("rpc/login_socio_v2", {
+      // Llamada sin mes/ciudad: la función responde qué datos requiere.
+      const data = await sb("rpc/login_socio_v3", {
         method: "POST",
         headers: { Prefer: "return=representation" },
-        body: JSON.stringify({
-          p_dni: dni.trim(),
-          p_mes: Number(mes),
-          p_ciudad: ciudad.trim(),
-        }),
+        body: JSON.stringify({ p_dni: dni.trim() }),
       });
-      if (data && data.ok === true && data.socio) {
-        onLogin(data.socio);
-        return;
-      }
-      // Cuenta existe pero no está activa
-      if (data && data.motivo === "no_activo") {
-        setError("Tu cuenta aún no está activa. Estamos procesando tu vinculación — escribinos al WhatsApp +54 9 3518 05-7172 para más información.");
-        setLoading(false);
-        return;
-      }
-      // Datos incorrectos: no revelamos qué campo falló
-      const n = intentos + 1;
-      setIntentos(n);
-      if (n >= 4) {
-        setError("Demasiados intentos. Si no podés acceder, escribinos al WhatsApp +54 9 3518 05-7172.");
+      if (data && data.motivo === "faltan_datos") {
+        setReqMes(data.requiere_mes === true);
+        setReqCiudad(data.requiere_ciudad === true);
+        setPaso("verificar");
+      } else if (data && data.motivo === "ficha_incompleta") {
+        setError("No podemos verificar tu identidad automáticamente. Escribinos al WhatsApp +54 9 3518 05-7172 y te ayudamos a acceder.");
+      } else if (data && data.motivo === "datos_incorrectos") {
+        // DNI no encontrado — no lo revelamos explícitamente, pedimos datos igual
+        setReqMes(true);
+        setReqCiudad(true);
+        setPaso("verificar");
       } else {
-        setError("Los datos no coinciden. Revisá el DNI, el mes de nacimiento y la ciudad, e intentá de nuevo.");
+        setError("Hubo un error. Intentá de nuevo en unos minutos.");
       }
     } catch (err) {
       setError("Hubo un error. Intentá de nuevo en unos minutos.");
     }
     setLoading(false);
   };
+
+  // Paso 2: validamos con los datos requeridos. La función v3 valida
+  // solo los que el socio tiene cargados.
+  const verificar = async (e) => {
+    e.preventDefault();
+    if (reqMes && !mes) { setError("Elegí tu mes de nacimiento."); return; }
+    if (reqCiudad && !ciudad.trim()) { setError("Ingresá tu ciudad."); return; }
+    setLoading(true);
+    setError("");
+    try {
+      const data = await sb("rpc/login_socio_v3", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          p_dni: dni.trim(),
+          p_mes: reqMes ? Number(mes) : null,
+          p_ciudad: reqCiudad ? ciudad.trim() : null,
+        }),
+      });
+      if (data && data.ok === true && data.socio) {
+        onLogin(data.socio);
+        return;
+      }
+      if (data && data.motivo === "no_activo") {
+        setError("Tu cuenta aún no está activa. Estamos procesando tu vinculación — escribinos al WhatsApp +54 9 3518 05-7172 para más información.");
+        setLoading(false);
+        return;
+      }
+      if (data && data.motivo === "ficha_incompleta") {
+        setError("No podemos verificar tu identidad automáticamente. Escribinos al WhatsApp +54 9 3518 05-7172 y te ayudamos.");
+        setLoading(false);
+        return;
+      }
+      const n = intentos + 1;
+      setIntentos(n);
+      if (n >= 4) {
+        setError("Demasiados intentos. Si no podés acceder, escribinos al WhatsApp +54 9 3518 05-7172.");
+      } else {
+        setError("Los datos no coinciden. Revisá e intentá de nuevo.");
+      }
+    } catch (err) {
+      setError("Hubo un error. Intentá de nuevo en unos minutos.");
+    }
+    setLoading(false);
+  };
+
+  const volverDni = () => { setPaso("dni"); setError(""); setMes(""); setCiudad(""); setReqMes(false); setReqCiudad(false); };
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, fontFamily: F, padding: "0 6%" }}>
@@ -604,29 +635,33 @@ function LoginSocios({ onLogin }) {
                 <input value={dni} onChange={e => setDni(e.target.value.replace(/\D/g, ""))} inputMode="numeric" autoFocus placeholder="Ej: 44999653" style={inputStyle} />
               </div>
               {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", color: "#991B1B", fontSize: 13, marginBottom: 20 }}>{error}</div>}
-              <button type="submit" style={{ ...btnGreen, width: "100%", padding: 14 }}>Continuar</button>
+              <button type="submit" disabled={loading} style={{ ...btnGreen, width: "100%", padding: 14, opacity: loading ? 0.5 : 1 }}>{loading ? "Verificando..." : "Continuar"}</button>
             </form>
           )}
 
           {paso === "verificar" && (
             <>
-              <p style={{ fontSize: 14, color: C.body, marginBottom: 20, lineHeight: 1.6 }}>Para confirmar tu identidad, ingresá estos datos:</p>
+              <p style={{ fontSize: 14, color: C.body, marginBottom: 20, lineHeight: 1.6 }}>Para confirmar tu identidad, ingresá {reqMes && reqCiudad ? "estos datos" : "este dato"}:</p>
               <form onSubmit={verificar}>
-                <div style={{ marginBottom: 18 }}>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Mes de nacimiento</label>
-                  <select value={mes} onChange={e => setMes(e.target.value)} style={inputStyle}>
-                    <option value="">Elegí un mes...</option>
-                    {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                  </select>
-                </div>
-                <div style={{ marginBottom: 22 }}>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Ciudad donde vivís</label>
-                  <input value={ciudad} onChange={e => setCiudad(e.target.value)} placeholder="Ej: Córdoba" style={inputStyle} />
-                </div>
+                {reqMes && (
+                  <div style={{ marginBottom: 18 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Mes de nacimiento</label>
+                    <select value={mes} onChange={e => setMes(e.target.value)} style={inputStyle}>
+                      <option value="">Elegí un mes...</option>
+                      {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                    </select>
+                  </div>
+                )}
+                {reqCiudad && (
+                  <div style={{ marginBottom: 22 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Ciudad donde vivís</label>
+                    <input value={ciudad} onChange={e => setCiudad(e.target.value)} placeholder="Ej: Córdoba" style={inputStyle} />
+                  </div>
+                )}
                 {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", color: "#991B1B", fontSize: 13, marginBottom: 20 }}>{error}</div>}
                 <button type="submit" disabled={loading || intentos >= 4} style={{ ...btnGreen, width: "100%", padding: 14, opacity: (loading || intentos >= 4) ? 0.5 : 1 }}>{loading ? "Verificando..." : "Acceder"}</button>
               </form>
-              <button onClick={() => { setPaso("dni"); setError(""); setMes(""); setCiudad(""); }} style={{ background: "transparent", color: C.muted, border: "none", fontSize: 13, cursor: "pointer", fontFamily: F, padding: "8px", marginTop: 16, width: "100%" }}>← Usar otro DNI</button>
+              <button onClick={volverDni} style={{ background: "transparent", color: C.muted, border: "none", fontSize: 13, cursor: "pointer", fontFamily: F, padding: "8px", marginTop: 16, width: "100%" }}>← Usar otro DNI</button>
             </>
           )}
         </div>
