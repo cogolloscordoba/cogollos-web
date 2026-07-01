@@ -143,7 +143,11 @@ function ZonaSocios({ socio, onLogout }) {
 
   useEffect(() => {
     sb("productos?select=*&activo=eq.true&order=nombre").then(data => setProductos(Array.isArray(data) ? data : []));
-    sb(`pedidos?select=*,productos(nombre)&socio_id=eq.${socio.id}&order=created_at.desc`).then(data => setPedidos(Array.isArray(data) ? data : []));
+    sb("rpc/pedidos_de_socio", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ p_socio_id: socio.id }),
+    }).then(data => setPedidos(Array.isArray(data) ? data : []));
   }, [socio.id]);
 
   const totalUnidades = Object.values(cantidades).reduce((s, v) => s + v, 0);
@@ -189,7 +193,11 @@ function ZonaSocios({ socio, onLogout }) {
     setCantidades({});
     setPedidoEnviado(true);
     setEnviando(false);
-    sb(`pedidos?select=*,productos(nombre)&socio_id=eq.${socio.id}&order=created_at.desc`).then(data => setPedidos(Array.isArray(data) ? data : []));
+    sb("rpc/pedidos_de_socio", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ p_socio_id: socio.id }),
+    }).then(data => setPedidos(Array.isArray(data) ? data : []));
   };
 
   const estadoColor = { pendiente: ["#FAEEDA","#633806"], preparando: ["#EEEDFE","#3C3489"], en_camino: ["#E6F1FB","#0C447C"], entregado: ["#EAF3DE","#27500A"], cancelado: ["#FCEBEB","#A32D2D"] };
@@ -319,7 +327,7 @@ function ZonaSocios({ socio, onLogout }) {
                   return (
                     <div key={p.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                       <div style={{ flex: 1, minWidth: 180 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{p.productos?.nombre || "—"}</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{p.producto_nombre || "—"}</div>
                         <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10 }}>
                           <span>{p.cantidad} u · ${(p.precio_unitario * p.cantidad).toLocaleString("es-AR")}</span>
                           <span>{p.metodo_pago}</span>
