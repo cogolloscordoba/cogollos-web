@@ -593,6 +593,7 @@ function Socios({ toast }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [filtroOrigen, setFiltroOrigen] = useState("todos");
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
   const [form, setForm] = useState({ nombre: "", dni: "", telefono: "", email: "", direccion: "", cuit: "", estado: "activo", notas: "", reprocann_codigo: "", reprocann_nro_tramite: "", consulta_realizada: false });
@@ -643,10 +644,14 @@ function Socios({ toast }) {
     const matchSearch = !q || s.nombre?.toLowerCase().includes(q) || s.dni?.includes(q) || s.telefono?.includes(q);
     const matchEstado =
       filtroEstado === "todos" ? true :
-      filtroEstado === "web" ? (s.origen === "web") :
       filtroEstado === "sin_consulta" ? (s.estado === "pendiente" && !s.consulta_realizada) :
       s.estado === filtroEstado;
-    return matchSearch && matchEstado;
+    const matchOrigen =
+      filtroOrigen === "todos" ? true :
+      filtroOrigen === "web" ? (s.origen === "web") :
+      filtroOrigen === "manual" ? (s.origen !== "web") :
+      true;
+    return matchSearch && matchEstado && matchOrigen;
   });
 
   const stats = {
@@ -667,17 +672,31 @@ function Socios({ toast }) {
 
       <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre, DNI o teléfono..." style={{ ...inputStyle, maxWidth: 360, marginBottom: 12 }} />
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginRight: 4 }}>Estado:</span>
         {[
           ["todos", `Todos (${socios.length})`],
           ["activo", `Activos (${stats.activos})`],
           ["pendiente", `Pendientes (${stats.pendientes})`],
           ["sin_consulta", `Sin revisión médica (${stats.sin_consulta})`],
-          ["web", `🌐 Por web (${stats.web})`],
           ["inactivo", "Inactivos"],
         ].map(([v, l]) => (
           <button key={v} onClick={() => setFiltroEstado(v)} style={{ padding: "6px 14px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: filtroEstado === v ? "none" : `1px solid ${C.border}`, background: filtroEstado === v ? C.dark : C.white, color: filtroEstado === v ? "#fff" : C.muted, fontFamily: F }}>{l}</button>
         ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginRight: 4 }}>Origen:</span>
+        {[
+          ["todos", "Todos"],
+          ["web", `🌐 Por web (${stats.web})`],
+          ["manual", `Carga manual (${socios.length - stats.web})`],
+        ].map(([v, l]) => (
+          <button key={v} onClick={() => setFiltroOrigen(v)} style={{ padding: "6px 14px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: filtroOrigen === v ? "none" : `1px solid ${C.border}`, background: filtroOrigen === v ? "#0C447C" : C.white, color: filtroOrigen === v ? "#fff" : C.muted, fontFamily: F }}>{l}</button>
+        ))}
+        {(filtroEstado !== "todos" || filtroOrigen !== "todos") && (
+          <span style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{filtered.length} resultado{filtered.length !== 1 ? "s" : ""}</span>
+        )}
       </div>
 
       {loading ? <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Cargando...</div> : (

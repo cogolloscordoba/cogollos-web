@@ -413,17 +413,33 @@ function FormularioAlta() {
   const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" };
 
   if (enviado) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, fontFamily: F, padding: "0 6%" }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, fontFamily: F, padding: "40px 6%" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
-      <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
+      <div style={{ maxWidth: 520, width: "100%", textAlign: "center" }}>
         <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 56, marginBottom: 32 }} />
         <div style={{ background: C.white, borderRadius: 16, border: `1.5px solid ${C.border}`, padding: "40px 32px" }}>
           <div style={{ fontSize: 40, marginBottom: 16 }}>🌿</div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 12 }}>Solicitud enviada</h2>
-          <p style={{ color: C.body, fontSize: 15, lineHeight: 1.7, marginBottom: 24 }}>Recibimos tu solicitud. El siguiente paso es la consulta médica virtual con nuestro director. El equipo te va a contactar por WhatsApp para coordinar el turno.</p>
-          <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ ...btnGreen, display: "inline-block", textDecoration: "none", padding: "12px 28px" }}>Escribirnos al WhatsApp</a>
-          <div style={{ marginTop: 20 }}>
-            <button onClick={() => window.location.hash = ""} style={{ background: "none", border: "none", color: C.green, cursor: "pointer", fontFamily: F, fontSize: 13, fontWeight: 500 }}>← Volver al sitio</button>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 12 }}>¡Recibimos tu solicitud!</h2>
+          <p style={{ color: C.body, fontSize: 15, lineHeight: 1.7, marginBottom: 16 }}>
+            Gracias por dar el primer paso. <strong>Te vamos a acompañar en todo el proceso de vinculación</strong>, que incluye el alta en REPROCANN y la cita médica con nuestro director.
+          </p>
+          <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 28 }}>
+            Los datos que nos dejaste se usan únicamente para acompañarte en el <strong>alta de REPROCANN</strong> y coordinar tu <strong>cita médica</strong>.
+          </p>
+
+          <div style={{ background: C.pale, borderRadius: 12, padding: "24px 20px", marginBottom: 8 }}>
+            <p style={{ color: C.text, fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Escribinos para continuar:</p>
+            <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#25D366", color: "#fff", textDecoration: "none", padding: "14px 28px", borderRadius: 10, fontSize: 16, fontWeight: 700, fontFamily: F }}>
+              <span style={{ fontSize: 20 }}>💬</span> Escribinos por WhatsApp
+            </a>
+            <p style={{ color: C.muted, fontSize: 13, marginTop: 16, lineHeight: 1.6 }}>
+              ¿No tenés WhatsApp a mano? Guardá nuestro número:
+            </p>
+            <p style={{ color: C.text, fontSize: 18, fontWeight: 700, marginTop: 4, letterSpacing: "0.02em" }}>+54 9 3518 05-7172</p>
+          </div>
+
+          <div style={{ marginTop: 24 }}>
+            <button onClick={() => window.location.hash = ""} style={{ background: "none", border: "none", color: C.green, cursor: "pointer", fontFamily: F, fontSize: 14, fontWeight: 500 }}>← Volver al sitio</button>
           </div>
         </div>
       </div>
@@ -528,8 +544,8 @@ function LoginSocios({ onLogin }) {
     setPaso("verificar");
   };
 
-  // Paso 2: valida DNI + mes + ciudad TODO en el servidor (RPC login_socio).
-  // La ficha del socio solo vuelve si las tres coinciden.
+  // Paso 2: valida DNI + mes + ciudad en el servidor (RPC login_socio_v2).
+  // Distingue: datos incorrectos vs. cuenta no activa vs. acceso ok.
   const verificar = async (e) => {
     e.preventDefault();
     if (!mes || !ciudad.trim()) {
@@ -539,7 +555,7 @@ function LoginSocios({ onLogin }) {
     setLoading(true);
     setError("");
     try {
-      const data = await sb("rpc/login_socio", {
+      const data = await sb("rpc/login_socio_v2", {
         method: "POST",
         headers: { Prefer: "return=representation" },
         body: JSON.stringify({
@@ -548,17 +564,23 @@ function LoginSocios({ onLogin }) {
           p_ciudad: ciudad.trim(),
         }),
       });
-      if (Array.isArray(data) && data.length > 0) {
-        onLogin(data[0]);
+      if (data && data.ok === true && data.socio) {
+        onLogin(data.socio);
         return;
       }
-      // No coincide: no revelamos si falló el DNI, el mes o la ciudad.
+      // Cuenta existe pero no está activa
+      if (data && data.motivo === "no_activo") {
+        setError("Tu cuenta aún no está activa. Estamos procesando tu vinculación — escribinos al WhatsApp +54 9 3518 05-7172 para más información.");
+        setLoading(false);
+        return;
+      }
+      // Datos incorrectos: no revelamos qué campo falló
       const n = intentos + 1;
       setIntentos(n);
       if (n >= 4) {
         setError("Demasiados intentos. Si no podés acceder, escribinos al WhatsApp +54 9 3518 05-7172.");
       } else {
-        setError("Los datos no coinciden con un socio activo. Revisá e intentá de nuevo.");
+        setError("Los datos no coinciden. Revisá el DNI, el mes de nacimiento y la ciudad, e intentá de nuevo.");
       }
     } catch (err) {
       setError("Hubo un error. Intentá de nuevo en unos minutos.");
