@@ -47,7 +47,7 @@ const ESTADO_CONFIG = {
   cancelado:   { label: "Cancelado",   bg: "#FCEBEB", color: "#A32D2D", dot: "#F44336" },
 };
 
-const ESTADOS_FLUJO = ["pendiente", "preparando", "en_camino", "entregado"];
+
 
 // ─── Utilidades ───────────────────────────────────────────────────────
 function formatFecha(iso) {
