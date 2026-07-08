@@ -375,7 +375,7 @@ function ZonaSocios({ socio, onLogout }) {
 // ─── FORMULARIO DE ALTA ───────────────────────────────────────────────
 function FormularioAlta() {
   const isMobile = useIsMobile();
-  const [form, setForm] = useState({ nombre: "", apellido: "", dni: "", telefono: "", email: "", direccion: "", ciudad: "", provincia: "Córdoba", codigo_postal: "", cuit: "", notas: "" });
+  const [form, setForm] = useState({ nombre: "", apellido: "", dni: "", telefono: "", email: "", fecha_nacimiento: "", direccion: "", ciudad: "", provincia: "Córdoba", codigo_postal: "", cuit: "", notas: "" });
   const [step, setStep] = useState(1);
   const [enviado, setEnviado] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -384,7 +384,7 @@ function FormularioAlta() {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const validarStep1 = () => {
-    if (!form.nombre || !form.apellido || !form.dni || !form.telefono || !form.email) {
+    if (!form.nombre || !form.apellido || !form.dni || !form.telefono || !form.email || !form.fecha_nacimiento) {
       setError("Completá todos los campos obligatorios");
       return false;
     }
@@ -421,6 +421,7 @@ function FormularioAlta() {
           provincia: form.provincia,
           codigo_postal: form.codigo_postal.trim() || null,
           cuit: form.cuit.trim() || null,
+          fecha_nacimiento: form.fecha_nacimiento || null,
           estado: "pendiente",
           origen: "web",
           notas: form.notas.trim() || null,
@@ -495,7 +496,10 @@ function FormularioAlta() {
                 <div><label style={labelStyle}>Teléfono *</label><input value={form.telefono} onChange={e => set("telefono", e.target.value)} style={inputStyle} placeholder="Ej: 3512345678" /></div>
               </div>
               <div style={{ marginBottom: 14 }}><label style={labelStyle}>Email *</label><input type="email" value={form.email} onChange={e => set("email", e.target.value)} style={inputStyle} /></div>
-              <div style={{ marginBottom: 14 }}><label style={labelStyle}>CUIT</label><input value={form.cuit} onChange={e => set("cuit", e.target.value)} style={inputStyle} placeholder="Sin guiones" /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+                <div><label style={labelStyle}>Fecha de nacimiento *</label><input type="date" value={form.fecha_nacimiento} onChange={e => set("fecha_nacimiento", e.target.value)} style={inputStyle} /></div>
+                <div><label style={labelStyle}>CUIT</label><input value={form.cuit} onChange={e => set("cuit", e.target.value)} style={inputStyle} placeholder="Sin guiones" /></div>
+              </div>
               {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", color: "#991B1B", fontSize: 13, marginBottom: 16 }}>{error}</div>}
               <button onClick={() => validarStep1() && setStep(2)} style={{ ...btnGreen, width: "100%", padding: 14 }}>Continuar →</button>
             </div>
