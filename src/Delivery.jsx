@@ -109,16 +109,6 @@ function PedidoCard({ pedido, onEstadoChange }) {
   const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState(false);
   const cfg = ESTADO_CONFIG[pedido.estado] || ESTADO_CONFIG.pendiente;
-  const idxActual = ESTADOS_FLUJO.indexOf(pedido.estado);
-  const siguiente = ESTADOS_FLUJO[idxActual + 1];
-
-  const avanzar = async (e) => {
-    e.stopPropagation();
-    if (!siguiente || updating) return;
-    setUpdating(true);
-    await onEstadoChange(pedido.id, siguiente);
-    setUpdating(false);
-  };
 
   return (
     <div
@@ -211,47 +201,38 @@ function PedidoCard({ pedido, onEstadoChange }) {
             ))}
           </div>
 
-          {/* Acciones de estado */}
-          {pedido.estado !== "entregado" && pedido.estado !== "cancelado" && (
-            <div style={{ display: "flex", gap: 8 }}>
-              {siguiente && (
+          {/* Selector de estado libre */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.07em", marginBottom: 6 }}>CAMBIAR ESTADO</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {Object.entries(ESTADO_CONFIG).map(([key, cfg]) => (
                 <button
-                  onClick={avanzar}
+                  key={key}
+                  onClick={async e => {
+                    e.stopPropagation();
+                    if (key === pedido.estado) return;
+                    setUpdating(true);
+                    await onEstadoChange(pedido.id, key);
+                    setUpdating(false);
+                  }}
                   disabled={updating}
                   style={{
-                    flex: 1, background: C.dark, color: "#fff", border: "none",
-                    borderRadius: 10, padding: "11px 0", fontSize: 14, fontWeight: 700,
-                    cursor: updating ? "not-allowed" : "pointer", fontFamily: F,
-                    opacity: updating ? 0.6 : 1,
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    background: key === pedido.estado ? cfg.bg : C.white,
+                    color: key === pedido.estado ? cfg.color : C.muted,
+                    border: `1.5px solid ${key === pedido.estado ? cfg.dot : C.border}`,
+                    borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 600,
+                    cursor: key === pedido.estado ? "default" : "pointer",
+                    fontFamily: F, opacity: updating ? 0.6 : 1,
+                    transition: "all 0.15s",
                   }}
                 >
-                  {updating ? "Actualizando..." : `Marcar como ${ESTADO_CONFIG[siguiente]?.label}`}
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
+                  {cfg.label}
                 </button>
-              )}
-              <button
-                onClick={async e => {
-                  e.stopPropagation();
-                  if (!window.confirm("¿Cancelar este pedido?")) return;
-                  setUpdating(true);
-                  await onEstadoChange(pedido.id, "cancelado");
-                  setUpdating(false);
-                }}
-                style={{
-                  background: "transparent", color: "#A32D2D", border: "1px solid #FECACA",
-                  borderRadius: 10, padding: "11px 16px", fontSize: 13, fontWeight: 600,
-                  cursor: "pointer", fontFamily: F,
-                }}
-              >
-                Cancelar
-              </button>
+              ))}
             </div>
-          )}
-
-          {pedido.estado === "entregado" && (
-            <div style={{ background: "#EAF3DE", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#27500A", fontWeight: 600, textAlign: "center" }}>
-              ✓ Entregado el {formatFecha(pedido.updated_at || pedido.created_at)}
-            </div>
-          )}
+          </div>
         </div>
       )}
     </div>
