@@ -327,24 +327,42 @@ function ZonaSocios({ socio, onLogout }) {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {pedidos.map(p => {
-                  const [bg, tc] = estadoColor[p.estado] || estadoColor.pendiente;
-                  const fecha = new Date(p.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
-                  return (
-                    <div key={p.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                      <div style={{ flex: 1, minWidth: 180 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{p.producto_nombre || "—"}</div>
-                        <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10 }}>
-                          <span>{p.cantidad} u · ${(p.precio_unitario * p.cantidad).toLocaleString("es-AR")}</span>
-                          <span>{p.metodo_pago}</span>
-                          <span>Retiro {p.turno_delivery}</span>
-                          <span>{fecha}</span>
+                {(() => {
+                  // Agrupar por ticket_id
+                  const grupos = pedidos.reduce((acc, p) => {
+                    const key = p.ticket_id || p.id;
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push(p);
+                    return acc;
+                  }, {});
+                  return Object.entries(grupos).map(([key, items]) => {
+                    const [bg, tc] = estadoColor[items[0].estado] || estadoColor.pendiente;
+                    const fecha = new Date(items[0].created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+                    const total = items.reduce((s, i) => s + Number(i.precio_unitario) * i.cantidad, 0);
+                    return (
+                      <div key={key} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: items.length > 1 ? 10 : 0 }}>
+                          <div style={{ flex: 1 }}>
+                            {items.length === 1 ? (
+                              <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{items[0].producto_nombre || "—"}</div>
+                            ) : (
+                              <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 6 }}>
+                                {items.map(i => `${i.producto_nombre} x${i.cantidad}`).join(" · ")}
+                              </div>
+                            )}
+                            <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                              <span>${total.toLocaleString("es-AR")}</span>
+                              <span>{items[0].metodo_pago}</span>
+                              <span>{items[0].modalidad === "delivery" ? "Delivery" : "Retiro"} {items[0].turno_delivery}</span>
+                              <span>{fecha}</span>
+                            </div>
+                          </div>
+                          <span style={{ background: bg, color: tc, borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{items[0].estado?.replace("_"," ")}</span>
                         </div>
                       </div>
-                      <span style={{ background: bg, color: tc, borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{p.estado?.replace("_"," ")}</span>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             )}
           </div>
