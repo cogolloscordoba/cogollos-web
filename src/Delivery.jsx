@@ -4,17 +4,39 @@ import { useState, useEffect, useCallback } from "react";
 const SB_URL = "https://mphiidkjfjxcqrrfbpfu.supabase.co";
 const SB_KEY = "sb_publishable_sKq0rU3ft8rEHCO8MeF0Kg_ciDXTfpz";
 
-const sb = async (path, opts = {}) => {
-  const token = sessionStorage.getItem("cogo_admin_token") || SB_KEY;
-  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
-    ...opts,
-    headers: {
-      apikey: SB_KEY,
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...opts.headers,
-    },
+async function refreshToken() {
+  const refresh = sessionStorage.getItem("cogo_refresh_token");
+  if (!refresh) return null;
+  const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: refresh }),
   });
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data.access_token) {
+    sessionStorage.setItem("cogo_admin_token", data.access_token);
+    if (data.refresh_token) sessionStorage.setItem("cogo_refresh_token", data.refresh_token);
+    return data.access_token;
+  }
+  return null;
+}
+
+const sb = async (path, opts = {}) => {
+  let token = sessionStorage.getItem("cogo_admin_token") || SB_KEY;
+  const doReq = async (t) => fetch(`${SB_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${t}`, "Content-Type": "application/json", ...opts.headers },
+  });
+  let res = await doReq(token);
+  // Si el token venció, refrescamos y reintentamos una vez
+  if (res.status === 401) {
+    const newToken = await refreshToken();
+    if (newToken) {
+      token = newToken;
+      res = await doReq(token);
+    }
+  }
   if (!res.ok) throw new Error(await res.text());
   const text = await res.text();
   return text ? JSON.parse(text) : null;
@@ -28,7 +50,11 @@ async function loginAdmin(email, password) {
   });
   if (!res.ok) return null;
   const data = await res.json();
-  return data.access_token ? data : null;
+  if (data.access_token) {
+    if (data.refresh_token) sessionStorage.setItem("cogo_refresh_token", data.refresh_token);
+    return data;
+  }
+  return null;
 }
 
 // ─── Tokens ──────────────────────────────────────────────────────────
