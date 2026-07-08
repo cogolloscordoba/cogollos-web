@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import Dashboard from "./Dashboard";
 import Delivery from "./Delivery";
-// y en el router:
-if (hash === "#/delivery") return <Delivery />;
+
 // ─── Supabase ────────────────────────────────────────────────────────
 const SB_URL = "https://mphiidkjfjxcqrrfbpfu.supabase.co";
 const SB_KEY = "sb_publishable_sKq0rU3ft8rEHCO8MeF0Kg_ciDXTfpz";
