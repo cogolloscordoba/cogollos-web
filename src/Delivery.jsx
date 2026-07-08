@@ -292,7 +292,7 @@ function DeliveryView({ onLogout }) {
     await sb(`pedidos?id=eq.${id}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ estado: nuevoEstado, updated_at: new Date().toISOString() }),
+      body: JSON.stringify({ estado: nuevoEstado }),
     });
     setPedidos(prev => prev.map(p => p.id === id ? { ...p, estado: nuevoEstado } : p));
     setToast(`Pedido marcado como ${ESTADO_CONFIG[nuevoEstado]?.label}`);
