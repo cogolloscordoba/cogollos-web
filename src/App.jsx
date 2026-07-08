@@ -16,8 +16,6 @@ const sb = async (path, opts = {}) => {
 };
 
 // ─── Login admin via Supabase Auth ──────────────────────────────────
-// El login admin ahora se valida contra Supabase Auth (servidor),
-// no contra constantes en el código.
 async function loginAdminSupabase(email, password) {
   const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
     method: "POST",
@@ -207,7 +205,6 @@ function ZonaSocios({ socio, onLogout }) {
     <div style={{ minHeight: "100vh", background: C.pale, fontFamily: F }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }`}</style>
 
-      {/* Header */}
       <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 60, position: "sticky", top: 0, zIndex: 50 }}>
         <img src="/logo.png" alt="Cogollos" style={{ height: 30 }} />
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
@@ -216,7 +213,6 @@ function ZonaSocios({ socio, onLogout }) {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", gap: 4 }}>
         {[["catalogo","Catálogo"], ["mis-pedidos","Mis retiros"]].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding: "14px 20px", fontSize: 14, fontWeight: tab===id ? 700 : 400, color: tab===id ? C.dark : C.muted, background: "none", border: "none", borderBottom: tab===id ? `3px solid ${C.dark}` : "3px solid transparent", cursor: "pointer", fontFamily: F }}>{label}</button>
@@ -224,13 +220,11 @@ function ZonaSocios({ socio, onLogout }) {
       </div>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 4%" : "32px 6%" }}>
-
-        {/* CATÁLOGO */}
         {tab === "catalogo" && (
           <div>
             <div style={{ marginBottom: 28 }}>
               <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Variedades disponibles</h2>
-              <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>Todas nuestras variedades son de desarrollo propio y acompañan a Cogollos Córdoba hace décadas. Hoy se están registrando en conjunto con INTA en el Instituto Nacional de la Semilla (INASE). Seleccioná las que querés retirar — los retiros se realizan los lunes, miércoles y viernes.</p>
+              <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>Variedades de desarrollo propio, registradas en conjunto con INTA en el Instituto Nacional de Semillas (INASE). Cultivadas con estándares agroecológicos y trazabilidad completa. Los retiros se coordinan los lunes, miércoles y viernes — también tenemos delivery.</p>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 32 }}>
@@ -262,7 +256,6 @@ function ZonaSocios({ socio, onLogout }) {
               })}
             </div>
 
-            {/* Resumen pedido */}
             {totalUnidades > 0 && !pedidoEnviado && (
               <div style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 14, padding: "24px 28px" }}>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 16 }}>Confirmar retiro</h3>
@@ -303,21 +296,21 @@ function ZonaSocios({ socio, onLogout }) {
 
             {pedidoEnviado && (
               <div style={{ background: C.light, border: `1.5px solid ${C.green}`, borderRadius: 14, padding: "24px 28px", textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 8 }}>Retiro solicitado</div>
-                <p style={{ color: C.body, fontSize: 14, marginBottom: 16 }}>Tu solicitud fue registrada. El equipo te va a contactar por WhatsApp para coordinar {modalidad === "retiro" ? "el retiro en sede" : "la entrega"} del {turno}.</p>
+                <div style={{ fontSize: 18, fontWeight: 700, color: C.dark, marginBottom: 8 }}>¡Retiro registrado!</div>
+                <p style={{ color: C.body, fontSize: 14, marginBottom: 16 }}>Tu solicitud está en camino. El equipo te va a contactar por WhatsApp para confirmar {modalidad === "retiro" ? "el retiro en sede" : "la entrega"} del {turno}.</p>
                 <button onClick={() => { setPedidoEnviado(false); setTab("mis-pedidos"); }} style={{ ...btnGreen, padding: "10px 24px", fontSize: 14 }}>Ver mis retiros</button>
               </div>
             )}
           </div>
         )}
 
-        {/* MIS PEDIDOS */}
         {tab === "mis-pedidos" && (
           <div>
             <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 24 }}>Mis retiros</h2>
             {pedidos.length === 0 ? (
               <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
                 <div style={{ fontSize: 15, marginBottom: 12 }}>Todavía no tenés retiros registrados</div>
+                <p style={{ fontSize: 13, marginBottom: 20, color: C.muted }}>Seleccioná lo que necesités del catálogo y coordinamos el retiro.</p>
                 <button onClick={() => setTab("catalogo")} style={{ ...btnGreen, padding: "10px 24px", fontSize: 14 }}>Ver catálogo</button>
               </div>
             ) : (
@@ -344,7 +337,6 @@ function ZonaSocios({ socio, onLogout }) {
             )}
           </div>
         )}
-
       </div>
     </div>
   );
@@ -382,7 +374,7 @@ function FormularioAlta() {
         body: JSON.stringify({ p_dni: form.dni.trim() }),
       });
       if (existente === true) {
-        setError("Ya existe un registro con ese DNI. Si creés que es un error, escribinos al WhatsApp.");
+        setError("Ya existe un registro con ese DNI. Si creés que es un error, escribinos al WhatsApp y te ayudamos.");
         setLoading(false);
         return;
       }
@@ -422,23 +414,19 @@ function FormularioAlta() {
           <div style={{ fontSize: 40, marginBottom: 16 }}>🌿</div>
           <h2 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 12 }}>¡Recibimos tu solicitud!</h2>
           <p style={{ color: C.body, fontSize: 15, lineHeight: 1.7, marginBottom: 16 }}>
-            Gracias por dar el primer paso. <strong>Te vamos a acompañar en todo el proceso de vinculación</strong>, que incluye el alta en REPROCANN y la cita médica con nuestro director.
+            Gracias por dar el primer paso. <strong>Te vamos a acompañar en todo el proceso de vinculación</strong>, que incluye el alta en REPROCANN y la consulta con nuestro director médico.
           </p>
           <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 28 }}>
-            Los datos que nos dejaste se usan únicamente para acompañarte en el <strong>alta de REPROCANN</strong> y coordinar tu <strong>cita médica</strong>.
+            Los datos que nos dejaste se usan únicamente para gestionar tu <strong>alta en REPROCANN</strong> y coordinar tu <strong>consulta médica</strong>. Tu privacidad es importante para nosotros.
           </p>
-
           <div style={{ background: C.pale, borderRadius: 12, padding: "24px 20px", marginBottom: 8 }}>
-            <p style={{ color: C.text, fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Escribinos para continuar:</p>
+            <p style={{ color: C.text, fontSize: 14, fontWeight: 600, marginBottom: 16 }}>El siguiente paso es escribirnos por WhatsApp:</p>
             <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#25D366", color: "#fff", textDecoration: "none", padding: "14px 28px", borderRadius: 10, fontSize: 16, fontWeight: 700, fontFamily: F }}>
               <span style={{ fontSize: 20 }}>💬</span> Escribinos por WhatsApp
             </a>
-            <p style={{ color: C.muted, fontSize: 13, marginTop: 16, lineHeight: 1.6 }}>
-              ¿No tenés WhatsApp a mano? Guardá nuestro número:
-            </p>
+            <p style={{ color: C.muted, fontSize: 13, marginTop: 16, lineHeight: 1.6 }}>¿No tenés WhatsApp a mano? Guardá nuestro número:</p>
             <p style={{ color: C.text, fontSize: 18, fontWeight: 700, marginTop: 4, letterSpacing: "0.02em" }}>+54 9 3518 05-7172</p>
           </div>
-
           <div style={{ marginTop: 24 }}>
             <button onClick={() => window.location.hash = ""} style={{ background: "none", border: "none", color: C.green, cursor: "pointer", fontFamily: F, fontSize: 14, fontWeight: 500 }}>← Volver al sitio</button>
           </div>
@@ -450,25 +438,20 @@ function FormularioAlta() {
   return (
     <div style={{ minHeight: "100vh", background: C.pale, fontFamily: F }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
-
       <div style={{ background: C.dark, padding: "0 6%", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src="/logo.png" alt="Cogollos" style={{ height: 30}} />
+        <img src="/logo.png" alt="Cogollos" style={{ height: 30 }} />
         <button onClick={() => window.location.hash = ""} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>← Volver</button>
       </div>
-
       <div style={{ maxWidth: 560, margin: "0 auto", padding: isMobile ? "32px 4%" : "48px 6%" }}>
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 8 }}>Quiero asociarme</h1>
-          <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.7 }}>Completá el formulario y el equipo te va a contactar para coordinar la consulta médica, que es el paso previo a la vinculación.</p>
+          <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.7 }}>Completá el formulario y el equipo te va a contactar para coordinar la consulta médica, que es el paso previo a tu vinculación con la ONG.</p>
         </div>
-
-        {/* Steps indicator */}
         <div style={{ display: "flex", gap: 8, marginBottom: 32 }}>
           {[1, 2].map(s => (
             <div key={s} style={{ flex: 1, height: 4, borderRadius: 4, background: s <= step ? C.dark : C.border }} />
           ))}
         </div>
-
         <div style={{ background: C.white, borderRadius: 16, border: `1.5px solid ${C.border}`, padding: "32px 28px" }}>
           {step === 1 && (
             <div>
@@ -487,7 +470,6 @@ function FormularioAlta() {
               <button onClick={() => validarStep1() && setStep(2)} style={{ ...btnGreen, width: "100%", padding: 14 }}>Continuar →</button>
             </div>
           )}
-
           {step === 2 && (
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 20 }}>Domicilio</h3>
@@ -509,7 +491,6 @@ function FormularioAlta() {
             </div>
           )}
         </div>
-
         <div style={{ marginTop: 24, padding: "16px 20px", background: C.white, borderRadius: 12, border: `1px solid ${C.border}` }}>
           <p style={{ color: C.muted, fontSize: 13 }}>
             ¿Tenés dudas antes de completar el formulario?
@@ -521,33 +502,26 @@ function FormularioAlta() {
   );
 }
 
-// ─── LOGIN SOCIOS (DNI) ───────────────────────────────────────────────
-// ─── LOGIN SOCIOS (DNI + mes nac + ciudad, validado en el servidor) ──
-// ─── LOGIN SOCIOS (pide solo los datos que el socio tiene cargados) ──
+// ─── LOGIN SOCIOS ─────────────────────────────────────────────────────
 function LoginSocios({ onLogin }) {
-  const [paso, setPaso] = useState("dni"); // dni | verificar
+  const [paso, setPaso] = useState("dni");
   const [dni, setDni] = useState("");
   const [mes, setMes] = useState("");
   const [ciudad, setCiudad] = useState("");
-  const [reqMes, setReqMes] = useState(false);     // este socio valida por mes
-  const [reqCiudad, setReqCiudad] = useState(false); // este socio valida por ciudad
+  const [reqMes, setReqMes] = useState(false);
+  const [reqCiudad, setReqCiudad] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [intentos, setIntentos] = useState(0);
 
   const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-  // Paso 1: con el DNI, preguntamos a la base qué datos pedir para ese socio.
   const seguirDni = async (e) => {
     e.preventDefault();
     setError("");
-    if (!/^\d{7,8}$/.test(dni.trim())) {
-      setError("Ingresá un DNI válido (7 u 8 dígitos).");
-      return;
-    }
+    if (!/^\d{7,8}$/.test(dni.trim())) { setError("Ingresá un DNI válido (7 u 8 dígitos)."); return; }
     setLoading(true);
     try {
-      // Llamada sin mes/ciudad: la función responde qué datos requiere.
       const data = await sb("rpc/login_socio_v3", {
         method: "POST",
         headers: { Prefer: "return=representation" },
@@ -560,10 +534,7 @@ function LoginSocios({ onLogin }) {
       } else if (data && data.motivo === "ficha_incompleta") {
         setError("No podemos verificar tu identidad automáticamente. Escribinos al WhatsApp +54 9 3518 05-7172 y te ayudamos a acceder.");
       } else if (data && data.motivo === "datos_incorrectos") {
-        // DNI no encontrado — no lo revelamos explícitamente, pedimos datos igual
-        setReqMes(true);
-        setReqCiudad(true);
-        setPaso("verificar");
+        setReqMes(true); setReqCiudad(true); setPaso("verificar");
       } else {
         setError("Hubo un error. Intentá de nuevo en unos minutos.");
       }
@@ -573,8 +544,6 @@ function LoginSocios({ onLogin }) {
     setLoading(false);
   };
 
-  // Paso 2: validamos con los datos requeridos. La función v3 valida
-  // solo los que el socio tiene cargados.
   const verificar = async (e) => {
     e.preventDefault();
     if (reqMes && !mes) { setError("Elegí tu mes de nacimiento."); return; }
@@ -585,25 +554,16 @@ function LoginSocios({ onLogin }) {
       const data = await sb("rpc/login_socio_v3", {
         method: "POST",
         headers: { Prefer: "return=representation" },
-        body: JSON.stringify({
-          p_dni: dni.trim(),
-          p_mes: reqMes ? Number(mes) : null,
-          p_ciudad: reqCiudad ? ciudad.trim() : null,
-        }),
+        body: JSON.stringify({ p_dni: dni.trim(), p_mes: reqMes ? Number(mes) : null, p_ciudad: reqCiudad ? ciudad.trim() : null }),
       });
-      if (data && data.ok === true && data.socio) {
-        onLogin(data.socio);
-        return;
-      }
+      if (data && data.ok === true && data.socio) { onLogin(data.socio); return; }
       if (data && data.motivo === "no_activo") {
-        setError("Tu cuenta aún no está activa. Estamos procesando tu vinculación — escribinos al WhatsApp +54 9 3518 05-7172 para más información.");
-        setLoading(false);
-        return;
+        setError("Tu cuenta todavía no está activa. Estamos procesando tu vinculación — escribinos al WhatsApp +54 9 3518 05-7172 y te contamos en qué paso estamos.");
+        setLoading(false); return;
       }
       if (data && data.motivo === "ficha_incompleta") {
         setError("No podemos verificar tu identidad automáticamente. Escribinos al WhatsApp +54 9 3518 05-7172 y te ayudamos.");
-        setLoading(false);
-        return;
+        setLoading(false); return;
       }
       const n = intentos + 1;
       setIntentos(n);
@@ -639,7 +599,6 @@ function LoginSocios({ onLogin }) {
               <button type="submit" disabled={loading} style={{ ...btnGreen, width: "100%", padding: 14, opacity: loading ? 0.5 : 1 }}>{loading ? "Verificando..." : "Continuar"}</button>
             </form>
           )}
-
           {paso === "verificar" && (
             <>
               <p style={{ fontSize: 14, color: C.body, marginBottom: 20, lineHeight: 1.6 }}>Para confirmar tu identidad, ingresá {reqMes && reqCiudad ? "estos datos" : "este dato"}:</p>
@@ -674,11 +633,11 @@ function LoginSocios({ onLogin }) {
   );
 }
 
-// ─── LANDING INSTITUCIONAL ───────────────────────────────────────────
+// ─── LANDING ──────────────────────────────────────────────────────────
 const PASOS = [
   { num: "01", titulo: "Alta en Mi Argentina y REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente, tipo de cultivo Otro, y copiá tu código de vinculación. Sacá una captura donde figuren tus datos y tu código de vinculación y envíanosla por WhatsApp.", link: "https://reprocann.msal.gob.ar/" },
-  { num: "02", titulo: "Cita médica", desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación.", link: "#/asociarse" },
-  { num: "03", titulo: "Vinculación en Cannalizar", desc: "Ya estamos cerca: completá la ficha médica y se te asignará un turno para hablar con nuestra dirección médica (horario a convenir). La cita médica tiene un costo de $80.000 — con descuento asociativo pagás $40.000." },
+  { num: "02", titulo: "Consulta médica", desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación.", link: "#/asociarse" },
+  { num: "03", titulo: "Vinculación en Cannalizar", desc: "Ya estamos cerca: completá la ficha médica y se te asignará un turno para hablar con nuestra dirección médica (horario a convenir). La consulta médica tiene un costo de $80.000 — con descuento asociativo pagás $40.000." },
 ];
 
 function Landing() {
@@ -699,7 +658,6 @@ function Landing() {
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
       `}</style>
 
-      {/* NAV */}
       <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(250,253,248,0.97)", backdropFilter: "blur(10px)", borderBottom: `1px solid ${C.border}`, padding: `0 ${isMobile ? "4%" : "6%"}`, display: "flex", alignItems: "center", height: 64 }}>
         <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: isMobile ? 36 : 44, cursor: "pointer" }} onClick={() => scrollTo("inicio")} />
         {isMobile ? (
@@ -726,26 +684,25 @@ function Landing() {
         </div>
       )}
 
-      {/* HERO */}
       <section id="inicio" style={{ minHeight: "100vh", display: "flex", alignItems: "center", padding: isMobile ? "90px 6% 60px" : "100px 6% 80px", background: `linear-gradient(160deg, ${C.white} 50%, ${C.light} 100%)` }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", width: "100%", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 40 : 60, alignItems: "center" }}>
           <div>
-            <div style={{ display: "inline-block", background: C.light, color: C.dark, borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 28 }}>ASOCIACIÓN CIVIL · RES. IPJ 207 C/21</div>
+            <div style={{ display: "inline-block", background: C.light, color: C.dark, borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 28 }}>ASOCIACIÓN CIVIL · HABILITADA POR REPROCANN</div>
             <h1 style={{ fontSize: isMobile ? "clamp(30px,8vw,42px)" : "clamp(34px,4.5vw,54px)", fontWeight: 700, lineHeight: 1.15, color: C.text, marginBottom: 20 }}>
-              Cannabis medicinal<br /><span style={{ color: C.green }}>legal y de calidad</span><br />en Córdoba
+              Cannabis medicinal<br /><span style={{ color: C.green }}>cultivado con cuidado</span><br />para vos
             </h1>
             <p style={{ color: C.body, fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 36, maxWidth: 480 }}>
-              Asociación Civil Cogollos Córdoba (Res. IPJ 207-C/21). Somos la primera asociación cannábica argentina, fundada en 2001. Brindamos servicio de salud con cannabis medicinal dentro del marco de la ley 27.350, aprobados dentro del REPROCANN del Ministerio de Salud de la Nación.
+              Somos la primera asociación cannábica de Argentina, fundada en 2001 en Córdoba. Cultivamos cannabis medicinal de manera legal, agroecológica y trazable, dentro del marco de la ley 27.350 y el registro REPROCANN del Ministerio de Salud.
             </p>
             <p style={{ color: C.body, fontSize: isMobile ? 14 : 15, lineHeight: 1.7, marginBottom: 28, maxWidth: 480 }}>
-              Ubicados en Córdoba, cultivamos cannabis medicinal agroecológico con los mejores estándares de calidad, respaldados por convenios de investigación y desarrollo con INTA, UTN y UNC.
+              Trabajamos en conjunto con INTA, UTN y UNC para garantizar la mejor calidad en cada variedad. No cobramos inscripción ni membresía mensual — solo la medicina que retirás.
             </p>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
               <button onClick={() => window.location.hash = "#/asociarse"} style={{ ...btnGreen, padding: isMobile ? "13px 22px" : "14px 28px", fontSize: isMobile ? 14 : 15, width: isMobile ? "100%" : "auto" }}>Quiero asociarme</button>
-              <button onClick={() => window.location.hash = "#/socios"} style={{ background: "transparent", color: C.green, border: `2px solid ${C.green}`, borderRadius: 10, padding: isMobile ? "13px 22px" : "14px 28px", fontFamily: F, fontWeight: 700, fontSize: isMobile ? 14 : 15, cursor: "pointer", width: isMobile ? "100%" : "auto" }}>Soy socio →</button>
+              <button onClick={() => window.location.hash = "#/socios"} style={{ background: "transparent", color: C.green, border: `2px solid ${C.green}`, borderRadius: 10, padding: isMobile ? "13px 22px" : "14px 28px", fontFamily: F, fontWeight: 700, fontSize: isMobile ? 14 : 15, cursor: "pointer", width: isMobile ? "100%" : "auto" }}>Acceso socios →</button>
             </div>
             <div style={{ display: "inline-block", background: C.light, color: C.dark, borderRadius: 8, padding: "12px 20px", fontSize: isMobile ? 14 : 16, fontWeight: 700 }}>
-              Sin membresía mensual, sin costo de inscripción
+              Sin membresía mensual · Sin costo de inscripción
             </div>
           </div>
           {!isMobile && (
@@ -756,19 +713,18 @@ function Landing() {
         </div>
       </section>
 
-      {/* NOSOTROS */}
       <section id="nosotros" style={{ padding: isMobile ? "70px 6%" : "100px 6%", background: C.white }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ maxWidth: 680, marginBottom: 48 }}>
             <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>QUIÉNES SOMOS</div>
             <h2 style={{ fontSize: "clamp(24px,3.5vw,40px)", fontWeight: 700, color: C.text, marginBottom: 20, lineHeight: 1.2 }}>La primera asociación cannábica de Argentina</h2>
-            <p style={{ color: C.body, fontSize: isMobile ? 14 : 16, lineHeight: 1.8 }}>Somos activistas, cultivadores y profesionales que trabajan por los derechos de las personas usuarias de marihuana y el reconocimiento de sus usos terapéuticos y de uso adulto responsable. Desde la sanción de la ley 27.350, somos una ONG habilitada para cultivar cannabis medicinal para nuestras personas vinculadas.</p>
+            <p style={{ color: C.body, fontSize: isMobile ? 14 : 16, lineHeight: 1.8 }}>Somos activistas, cultivadores y profesionales que trabajan por los derechos de las personas usuarias de cannabis y el reconocimiento de sus usos terapéuticos. Desde 2001 acompañamos a personas en su acceso al cannabis medicinal de calidad, y desde la sanción de la ley 27.350 somos una ONG habilitada para cultivar en nombre de nuestros socios vinculados.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px,1fr))", gap: 16 }}>
             {[
-              { titulo: "Edith 'La Negra' Moreno", texto: "Pionera en la lucha por los derechos de personas con VIH y el uso terapéutico del cannabis. Motor fundacional de Cogollos Córdoba y figura histórica del movimiento cannábico argentino." },
-              { titulo: "Investigaciones científicas", texto: "Trabajamos junto a INTA en un proyecto de investigación y desarrollo, y junto a UTN y UNC, perfeccionando e innovando en diferentes métodos de extracción y administración del cannabis medicinal." },
-              { titulo: "Habilitación legal", texto: "Asociación Civil inscripta (Res. IPJ 207 C/21, CUIT 30-71728612-6), habilitada por REPROCANN. Cultivamos legalmente como ONG vinculada a la salud." },
+              { titulo: "Edith 'La Negra' Moreno", texto: "Pionera en la lucha por los derechos de personas con VIH y el uso terapéutico del cannabis. Figura histórica del movimiento cannábico argentino y motor fundacional de Cogollos Córdoba." },
+              { titulo: "Investigación y desarrollo", texto: "Trabajamos junto a INTA en un proyecto de mejoramiento genético y registro de variedades propias, y junto a UTN y UNC en métodos de extracción y administración de cannabis medicinal." },
+              { titulo: "Marco legal vigente", texto: "Asociación Civil inscripta (Res. IPJ 207 C/21, CUIT 30-71728612-6), habilitada por REPROCANN. Cultivamos con respaldo legal como ONG vinculada a la salud pública." },
             ].map(card => (
               <div key={card.titulo} style={{ background: C.pale, borderRadius: 12, padding: "28px 24px", border: `1px solid ${C.border}` }}>
                 <div style={{ width: 4, height: 32, background: C.green, borderRadius: 4, marginBottom: 20 }} />
@@ -780,19 +736,18 @@ function Landing() {
         </div>
       </section>
 
-      {/* CÓMO FUNCIONA */}
       <section id="como-funciona" style={{ padding: isMobile ? "70px 6%" : "100px 6%", background: C.pale }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ maxWidth: 600, marginBottom: 48 }}>
             <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>CÓMO FUNCIONA</div>
-            <h2 style={{ fontSize: "clamp(24px,3.5vw,40px)", fontWeight: 700, color: C.text, marginBottom: 16, lineHeight: 1.2 }}>El cannabis lo cultivamos nosotros, vos lo retirás</h2>
-            <p style={{ color: C.body, fontSize: isMobile ? 14 : 15, lineHeight: 1.7 }}>Completá los requisitos de inscripción, hacés la consulta con nuestra dirección médica y te vinculamos con nosotros. Nosotros cultivamos y te entregamos tu medicina en el formato que necesites. No cobramos inscripción ni membresía mensual, solo la medicina que retirás. La consulta médica te la bonificamos el 50% para cultivo asociativo.</p>
+            <h2 style={{ fontSize: "clamp(24px,3.5vw,40px)", fontWeight: 700, color: C.text, marginBottom: 16, lineHeight: 1.2 }}>Nosotros cultivamos, vos retirás tu medicina</h2>
+            <p style={{ color: C.body, fontSize: isMobile ? 14 : 15, lineHeight: 1.7 }}>Completás los requisitos de inscripción y hacés una consulta con nuestra dirección médica. Después te vinculamos a la ONG y empezamos a cultivar por vos. No cobramos inscripción ni membresía mensual — solo la medicina que retirás. La consulta médica tiene un descuento del 50% para quienes se vinculan por cultivo asociativo.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 24, marginBottom: 48 }}>
             {[
-              { icon: "📋", titulo: "Marco legal", desc: "Todo funciona dentro del registro REPROCANN del Ministerio de Salud. La vinculación a nuestra ONG es el mecanismo legal que habilita el cultivo colectivo." },
-              { icon: "🌱", titulo: "Cultivo colectivo", desc: "Nuestro equipo cultiva las variedades medicinales en nombre de los socios vinculados. Garantizamos calidad, trazabilidad y continuidad de la producción." },
-              { icon: "📦", titulo: "Retiro programado", desc: "Los socios retiran su flor seca los lunes, miércoles y viernes. El retiro se coordina con al menos un día de anticipación." },
+              { icon: "📋", titulo: "Marco legal", desc: "Todo funciona dentro del registro REPROCANN del Ministerio de Salud. La vinculación a nuestra ONG es el mecanismo legal que habilita el cultivo colectivo y te protege como paciente." },
+              { icon: "🌱", titulo: "Cultivo propio", desc: "Nuestro equipo cultiva las variedades en nombre de los socios vinculados. Variedades propias, registradas con INTA, con trazabilidad y continuidad garantizada." },
+              { icon: "📦", titulo: "Retiro coordinado", desc: "Retirás los lunes, miércoles y viernes. También tenemos delivery. El pedido se coordina con al menos un día de anticipación y te avisamos por WhatsApp cuando está listo." },
             ].map(item => (
               <div key={item.titulo} style={{ background: C.white, borderRadius: 12, padding: "28px 24px", border: `1px solid ${C.border}` }}>
                 <div style={{ fontSize: 32, marginBottom: 16 }}>{item.icon}</div>
@@ -804,13 +759,12 @@ function Landing() {
         </div>
       </section>
 
-      {/* ASOCIARSE */}
       <section id="asociarse" style={{ padding: isMobile ? "70px 6%" : "100px 6%", background: C.dark }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ marginBottom: isMobile ? 36 : 56 }}>
             <div style={{ color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12 }}>CÓMO ASOCIARSE</div>
             <h2 style={{ fontSize: "clamp(24px,3.5vw,40px)", fontWeight: 700, color: "#fff", marginBottom: 16, lineHeight: 1.2 }}>El proceso de vinculación</h2>
-            <p style={{ color: "rgba(255,255,255,0.65)", fontSize: isMobile ? 14 : 16, maxWidth: 520 }}>Completá los requisitos y te acompañamos en cada paso.</p>
+            <p style={{ color: "rgba(255,255,255,0.65)", fontSize: isMobile ? 14 : 16, maxWidth: 520 }}>Tres pasos y te acompañamos en cada uno. El proceso tarda entre 1 y 2 semanas.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 16, marginBottom: 40 }}>
             {PASOS.map((paso, i) => (
@@ -829,18 +783,18 @@ function Landing() {
         </div>
       </section>
 
-      {/* PREGUNTAS FRECUENTES */}
       <section style={{ padding: isMobile ? "70px 6%" : "100px 6%", background: C.white }}>
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
           <div style={{ color: C.green, fontWeight: 700, fontSize: 12, letterSpacing: "0.1em", marginBottom: 12, textAlign: "center" }}>PREGUNTAS FRECUENTES</div>
           <h2 style={{ fontSize: "clamp(24px,3.5vw,40px)", fontWeight: 700, color: C.text, marginBottom: 40, lineHeight: 1.2, textAlign: "center" }}>Lo que más nos preguntan</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {[
-              { q: "¿Tengo que pagar una cuota mensual?", r: "No. Solo abonás lo que retirás." },
-              { q: "¿Hacen factura?", r: "Todas las dispensas son facturadas." },
-              { q: "¿Cuánto puedo retirar por mes?", r: "Lo que necesites, teniendo en cuenta que REPROCANN permite circular con hasta 40g y 6 aceites de 30ml." },
-              { q: "¿Puedo invitar a alguien?", r: "Sí, pasales nuestro número de WhatsApp." },
-              { q: "¿Qué puedo retirar?", r: "Podés verlo en nuestro catálogo. Accedés a derivados de cannabis sativa y material seco." },
+              { q: "¿Tengo que pagar una cuota mensual?", r: "No. Solo abonás lo que retirás, cuando lo retirás. Sin costos fijos ni sorpresas." },
+              { q: "¿Emiten factura?", r: "Sí. Todas las dispensas son facturadas." },
+              { q: "¿Cuánto puedo retirar por mes?", r: "Lo que necesités. REPROCANN permite circular con hasta 40g y 6 aceites de 30ml." },
+              { q: "¿Puedo recomendar a alguien?", r: "Claro, pasales nuestro número de WhatsApp y los acompañamos desde el primer mensaje." },
+              { q: "¿Qué productos puedo retirar?", r: "Flor seca de variedades propias y derivados de cannabis sativa. Próximamente aceites. El catálogo completo está disponible desde la zona de socios." },
+              { q: "¿Hacen delivery?", r: "Sí, los mismos días que los retiros: lunes, miércoles y viernes. Lo coordinamos por WhatsApp." },
             ].map((f, i) => (
               <div key={i} style={{ background: C.pale, borderRadius: 12, padding: "20px 24px", border: `1px solid ${C.border}` }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 8 }}>{f.q}</div>
@@ -851,13 +805,12 @@ function Landing() {
         </div>
       </section>
 
-      {/* FOOTER */}
       <footer style={{ background: "#000", padding: isMobile ? "48px 6% 28px" : "60px 6% 32px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr", gap: isMobile ? 32 : 40, marginBottom: isMobile ? 32 : 48 }}>
             <div>
               <img src="/logo.png" alt="Cogollos Córdoba" style={{ height: 48, marginBottom: 16 }} />
-              <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.7, maxWidth: 280, marginBottom: 16 }}>Asociación Civil sin fines de lucro. Fundada en 2001. Habilitada por REPROCANN para el cultivo de cannabis medicinal.</p>
+              <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.7, maxWidth: 280, marginBottom: 16 }}>Asociación Civil sin fines de lucro. Fundada en 2001 en Córdoba. Habilitada por REPROCANN para el cultivo colectivo de cannabis medicinal.</p>
               <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>Res. IPJ 207 C/21 · CUIT 30-71728612-6</p>
             </div>
             <div>
@@ -889,7 +842,7 @@ function Landing() {
   );
 }
 
-// ─── AUTOCULTIVO ─────────────────────────────────────────────────────
+// ─── AUTOCULTIVO ──────────────────────────────────────────────────────
 function Autocultivo() {
   const isMobile = useIsMobile();
 
@@ -910,23 +863,18 @@ function Autocultivo() {
   return (
     <div style={{ fontFamily: F, color: C.text, background: C.cream }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } html { scroll-behavior: smooth; }`}</style>
-
       <div style={{ background: C.dark, padding: `0 ${isMobile ? "4%" : "6%"}`, height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <img src="/logo.png" alt="Cogollos" style={{ height: 30, cursor: "pointer" }} onClick={() => window.location.hash = ""} />
         <button onClick={() => window.location.hash = ""} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: F }}>← Inicio</button>
       </div>
-
-      {/* Hero */}
       <div style={{ background: `linear-gradient(160deg, ${C.dark} 0%, #2B7A3E 100%)`, padding: isMobile ? "60px 6% 50px" : "80px 6% 70px" }}>
         <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
           <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 24 }}>GUÍA DE AUTOCULTIVO</div>
-          <h1 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>Cultivá tu cannabis de forma legal</h1>
-          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 32 }}>Si querés cultivar para uso personal, REPROCANN te da el marco legal para hacerlo. Te explicamos el proceso paso a paso.</p>
-          <button onClick={() => window.location.hash = "#/asociarse"} style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, border: "none", cursor: "pointer", textDecoration: "none" }}>Completar formulario →</button>
+          <h1 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>Cultivá tu cannabis de manera legal</h1>
+          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 32 }}>Si querés cultivar para uso personal, REPROCANN te da el respaldo legal para hacerlo. Te explicamos el proceso completo, paso a paso.</p>
+          <button onClick={() => window.location.hash = "#/asociarse"} style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, border: "none", cursor: "pointer" }}>Completar formulario →</button>
         </div>
       </div>
-
-      {/* Pasos */}
       <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.white }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: C.text, marginBottom: 40, textAlign: "center" }}>Paso a paso</h2>
@@ -944,8 +892,6 @@ function Autocultivo() {
           </div>
         </div>
       </div>
-
-      {/* FAQs */}
       <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.pale }}>
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: C.text, marginBottom: 36, textAlign: "center" }}>Preguntas frecuentes</h2>
@@ -959,14 +905,11 @@ function Autocultivo() {
           </div>
         </div>
       </div>
-
-      {/* CTA */}
       <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.dark, textAlign: "center" }}>
         <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: "#fff", marginBottom: 16 }}>¿Preferís no cultivar vos mismo?</h2>
-        <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, marginBottom: 32, maxWidth: 480, margin: "0 auto 32px" }}>Como socio de Cogollos, nosotros cultivamos por vos. Retirás tu flor seca sin preocuparte por el cultivo.</p>
+        <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, marginBottom: 32, maxWidth: 480, margin: "0 auto 32px" }}>Como socio de Cogollos, nuestro equipo cultiva por vos. Retirás tu flor seca sin ocuparte del cultivo, con trazabilidad y calidad garantizada.</p>
         <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: "#6FD67F", color: C.text, border: "none", borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Quiero asociarme a Cogollos</button>
       </div>
-
       <footer style={{ background: "#000", padding: "24px 6%", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
         <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>© 2026 Asociación Civil Cogollos Córdoba</span>
         <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>WhatsApp: +54 9 3518 05-7172</a>
@@ -982,7 +925,7 @@ export default function App() {
   const [adminLoggedIn, setAdminLoggedIn] = useState(() => sessionStorage.getItem("cogo_admin") === "1");
 
   useEffect(() => {
-    const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos" };
+    const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos", "#/delivery": "Delivery · Cogollos" };
     document.title = titles[hash] || "Cogollos Córdoba";
   }, [hash]);
 
@@ -993,6 +936,7 @@ export default function App() {
 
   if (hash === "#/asociarse") return <FormularioAlta />;
   if (hash === "#/autocultivo") return <Autocultivo />;
+  if (hash === "#/delivery") return <Delivery />;
 
   if (hash === "#/socios") {
     if (!socio) return <LoginSocios onLogin={s => setSocio(s)} />;
