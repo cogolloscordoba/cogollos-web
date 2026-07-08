@@ -159,6 +159,29 @@ function ZonaSocios({ socio, onLogout }) {
     if (!totalUnidades) return;
     setEnviando(true);
     const items = Object.entries(cantidades).filter(([,c]) => c > 0);
+
+    // Crear un único ticket para todo el pedido
+    const ticketId = Date.now().toString() + Math.random().toString(36).slice(2);
+    const resumenItems = items.map(([pid, cant]) => {
+      const prod = productos.find(p => p.id === pid);
+      return `${prod?.nombre} x${cant}`;
+    }).join(", ");
+
+    await sb("tickets", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        id: ticketId,
+        tipo: "retiro",
+        prioridad: "media",
+        resumen: `${modalidad === "delivery" ? "Delivery" : "Retiro"} ${turno}: ${resumenItems}`,
+        socio_id: socio.id,
+        telefono: socio.telefono,
+        estado: "abierto",
+      }),
+    });
+
+    // Crear un pedido por producto, todos vinculados al mismo ticket
     for (const [producto_id, cantidad] of items) {
       const prod = productos.find(p => p.id === producto_id);
       await sb("pedidos", {
@@ -173,22 +196,11 @@ function ZonaSocios({ socio, onLogout }) {
           turno_delivery: turno,
           modalidad: modalidad,
           estado: "pendiente",
-        }),
-      });
-      await sb("tickets", {
-        method: "POST",
-        headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({
-          id: Date.now().toString() + Math.random().toString(36).slice(2),
-          tipo: "retiro",
-          prioridad: "media",
-          resumen: `Retiro ${prod?.nombre} x${cantidad} - ${turno}`,
-          socio_id: socio.id,
-          telefono: socio.telefono,
-          estado: "abierto",
+          ticket_id: ticketId,
         }),
       });
     }
+
     setCantidades({});
     setPedidoEnviado(true);
     setEnviando(false);

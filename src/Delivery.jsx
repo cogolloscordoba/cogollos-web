@@ -104,11 +104,11 @@ function Toast({ msg, onClose }) {
   );
 }
 
-// ─── Card de pedido ───────────────────────────────────────────────────
-function PedidoCard({ pedido, onEstadoChange }) {
+// ─── Card de grupo (ticket) ──────────────────────────────────────────
+function GrupoCard({ grupo, onEstadoChange }) {
   const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState(false);
-  const cfg = ESTADO_CONFIG[pedido.estado] || ESTADO_CONFIG.pendiente;
+  const cfg = ESTADO_CONFIG[grupo.estado] || ESTADO_CONFIG.pendiente;
 
   return (
     <div
@@ -120,26 +120,20 @@ function PedidoCard({ pedido, onEstadoChange }) {
         transition: "border-color 0.15s",
       }}
     >
-      {/* Cabecera siempre visible */}
+      {/* Cabecera */}
       <div style={{ padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}>
-        {/* Indicador de estado */}
-        <div style={{
-          width: 10, height: 10, borderRadius: "50%",
-          background: cfg.dot, flexShrink: 0,
-        }} />
-
+        <div style={{ width: 10, height: 10, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {pedido.socio_nombre || "—"}
+            {grupo.socio_nombre || "—"}
           </div>
           <div style={{ fontSize: 12, color: C.muted }}>
-            {pedido.producto_nombre} · {pedido.cantidad} u · ${Number(pedido.precio_unitario * pedido.cantidad).toLocaleString("es-AR")}
+            {grupo.items.map(i => `${i.producto_nombre} x${i.cantidad}`).join(" · ")} · ${grupo.total.toLocaleString("es-AR")}
           </div>
         </div>
-
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <Badge estado={pedido.estado} />
-          <span style={{ color: C.muted, fontSize: 16, lineHeight: 1 }}>{expanded ? "▲" : "▼"}</span>
+          <Badge estado={grupo.estado} />
+          <span style={{ color: C.muted, fontSize: 16 }}>{expanded ? "▲" : "▼"}</span>
         </div>
       </div>
 
@@ -150,33 +144,23 @@ function PedidoCard({ pedido, onEstadoChange }) {
           {/* Dirección */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.07em", marginBottom: 4 }}>DIRECCIÓN</div>
-            <div style={{ fontSize: 14, color: C.text, lineHeight: 1.5 }}>{pedido.socio_direccion || "Sin dirección registrada"}</div>
+            <div style={{ fontSize: 14, color: C.text, lineHeight: 1.5 }}>{grupo.socio_direccion || "Sin dirección registrada"}</div>
           </div>
 
-          {/* Teléfono */}
+          {/* Contacto */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.07em", marginBottom: 6 }}>CONTACTO</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button
-                onClick={e => { e.stopPropagation(); llamar(pedido.socio_telefono); }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  background: C.light, color: C.dark, border: `1px solid ${C.border}`,
-                  borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600,
-                  cursor: "pointer", fontFamily: F,
-                }}
+                onClick={e => { e.stopPropagation(); llamar(grupo.socio_telefono); }}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: C.light, color: C.dark, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: F }}
               >
-                📞 {pedido.socio_telefono || "Sin teléfono"}
+                📞 {grupo.socio_telefono || "Sin teléfono"}
               </button>
-              {pedido.socio_telefono && (
+              {grupo.socio_telefono && (
                 <button
-                  onClick={e => { e.stopPropagation(); whatsapp(pedido.socio_telefono, pedido.socio_nombre); }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    background: "#25D366", color: "#fff", border: "none",
-                    borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600,
-                    cursor: "pointer", fontFamily: F,
-                  }}
+                  onClick={e => { e.stopPropagation(); whatsapp(grupo.socio_telefono, grupo.socio_nombre); }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, background: "#25D366", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: F }}
                 >
                   💬 WhatsApp
                 </button>
@@ -184,15 +168,30 @@ function PedidoCard({ pedido, onEstadoChange }) {
             </div>
           </div>
 
-          {/* Detalles del pedido */}
+          {/* Items del pedido */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.07em", marginBottom: 8 }}>PRODUCTOS</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {grupo.items.map(item => (
+                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", background: C.white, borderRadius: 8, padding: "8px 12px", border: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{item.producto_nombre} x{item.cantidad}</span>
+                  <span style={{ fontSize: 13, color: C.muted }}>${(Number(item.precio_unitario) * item.cantidad).toLocaleString("es-AR")}</span>
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 12px" }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Total</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>${grupo.total.toLocaleString("es-AR")}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Info del pedido */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
             {[
-              ["Producto", pedido.producto_nombre],
-              ["Cantidad", `${pedido.cantidad} unidad${pedido.cantidad > 1 ? "es" : ""}`],
-              ["Pago", pedido.metodo_pago],
-              ["Turno", pedido.turno_delivery],
-              ["Fecha", formatFecha(pedido.created_at)],
-              ["Hora", formatHora(pedido.created_at)],
+              ["Pago", grupo.metodo_pago],
+              ["Turno", grupo.turno_delivery],
+              ["Modalidad", grupo.modalidad],
+              ["Fecha", formatFecha(grupo.created_at)],
             ].map(([k, v]) => (
               <div key={k}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.07em", marginBottom: 2 }}>{k.toUpperCase()}</div>
@@ -201,7 +200,7 @@ function PedidoCard({ pedido, onEstadoChange }) {
             ))}
           </div>
 
-          {/* Selector de estado libre */}
+          {/* Selector de estado */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: "0.07em", marginBottom: 6 }}>CAMBIAR ESTADO</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -210,19 +209,19 @@ function PedidoCard({ pedido, onEstadoChange }) {
                   key={key}
                   onClick={async e => {
                     e.stopPropagation();
-                    if (key === pedido.estado) return;
+                    if (key === grupo.estado) return;
                     setUpdating(true);
-                    await onEstadoChange(pedido.id, key);
+                    await onEstadoChange(grupo.ticketId, key);
                     setUpdating(false);
                   }}
                   disabled={updating}
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 5,
-                    background: key === pedido.estado ? cfg.bg : C.white,
-                    color: key === pedido.estado ? cfg.color : C.muted,
-                    border: `1.5px solid ${key === pedido.estado ? cfg.dot : C.border}`,
+                    background: key === grupo.estado ? cfg.bg : C.white,
+                    color: key === grupo.estado ? cfg.color : C.muted,
+                    border: `1.5px solid ${key === grupo.estado ? cfg.dot : C.border}`,
                     borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 600,
-                    cursor: key === pedido.estado ? "default" : "pointer",
+                    cursor: key === grupo.estado ? "default" : "pointer",
                     fontFamily: F, opacity: updating ? 0.6 : 1,
                     transition: "all 0.15s",
                   }}
@@ -269,37 +268,59 @@ function DeliveryView({ onLogout }) {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const cambiarEstado = async (id, nuevoEstado) => {
-    await sb(`pedidos?id=eq.${id}`, {
+  const cambiarEstadoGrupo = async (ticketId, nuevoEstado) => {
+    // Actualizar todos los pedidos del ticket
+    await sb(`pedidos?ticket_id=eq.${ticketId}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify({ estado: nuevoEstado }),
     });
-    setPedidos(prev => prev.map(p => p.id === id ? { ...p, estado: nuevoEstado } : p));
+    setPedidos(prev => prev.map(p => p.ticket_id === ticketId ? { ...p, estado: nuevoEstado } : p));
     setToast(`Pedido marcado como ${ESTADO_CONFIG[nuevoEstado]?.label}`);
   };
 
-  const pedidosFiltrados = pedidos.filter(p => {
-    if (filtro === "activos") return p.estado !== "entregado" && p.estado !== "cancelado";
-    if (filtro === "entregado") return p.estado === "entregado";
+  // Agrupar pedidos por ticket_id
+  const gruposMap = pedidos.reduce((acc, p) => {
+    const key = p.ticket_id || p.id;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(p);
+    return acc;
+  }, {});
+
+  // Convertir a array de grupos, el estado del grupo es el del primer item
+  const grupos = Object.entries(gruposMap).map(([ticketId, items]) => ({
+    ticketId,
+    items,
+    estado: items[0].estado,
+    socio_nombre: items[0].socio_nombre,
+    socio_telefono: items[0].socio_telefono,
+    socio_direccion: items[0].socio_direccion,
+    turno_delivery: items[0].turno_delivery,
+    metodo_pago: items[0].metodo_pago,
+    modalidad: items[0].modalidad,
+    created_at: items[0].created_at,
+    total: items.reduce((s, i) => s + Number(i.precio_unitario) * i.cantidad, 0),
+  })).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  const gruposFiltrados = grupos.filter(g => {
+    if (filtro === "activos") return g.estado !== "entregado" && g.estado !== "cancelado";
+    if (filtro === "entregado") return g.estado === "entregado";
     return true;
   });
 
   const contadores = {
-    activos: pedidos.filter(p => p.estado !== "entregado" && p.estado !== "cancelado").length,
-    entregado: pedidos.filter(p => p.estado === "entregado").length,
-    todos: pedidos.length,
+    activos: grupos.filter(g => g.estado !== "entregado" && g.estado !== "cancelado").length,
+    entregado: grupos.filter(g => g.estado === "entregado").length,
+    todos: grupos.length,
   };
 
-  // Agrupar por turno para los activos
-  const porTurno = pedidosFiltrados.reduce((acc, p) => {
-    const turno = p.turno_delivery || "sin turno";
+  const ORDEN_TURNOS = ["lunes", "miercoles", "viernes", "sin turno"];
+  const porTurno = gruposFiltrados.reduce((acc, g) => {
+    const turno = g.turno_delivery || "sin turno";
     if (!acc[turno]) acc[turno] = [];
-    acc[turno].push(p);
+    acc[turno].push(g);
     return acc;
   }, {});
-
-  const ORDEN_TURNOS = ["lunes", "miercoles", "viernes", "sin turno"];
   const turnosOrdenados = Object.keys(porTurno).sort((a, b) => {
     const ia = ORDEN_TURNOS.indexOf(a);
     const ib = ORDEN_TURNOS.indexOf(b);
@@ -376,7 +397,7 @@ function DeliveryView({ onLogout }) {
           <div style={{ textAlign: "center", padding: "60px 0", color: C.muted, fontSize: 14 }}>
             Cargando pedidos...
           </div>
-        ) : pedidosFiltrados.length === 0 ? (
+        ) : gruposFiltrados.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0" }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
             <div style={{ fontSize: 15, color: C.muted }}>
@@ -384,7 +405,6 @@ function DeliveryView({ onLogout }) {
             </div>
           </div>
         ) : filtro === "activos" ? (
-          // Agrupado por turno cuando hay pendientes
           turnosOrdenados.map(turno => (
             <div key={turno} style={{ marginBottom: 28 }}>
               <div style={{
@@ -398,17 +418,16 @@ function DeliveryView({ onLogout }) {
                 </span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {porTurno[turno].map(p => (
-                  <PedidoCard key={p.id} pedido={p} onEstadoChange={cambiarEstado} />
+                {porTurno[turno].map(g => (
+                  <GrupoCard key={g.ticketId} grupo={g} onEstadoChange={cambiarEstadoGrupo} />
                 ))}
               </div>
             </div>
           ))
         ) : (
-          // Lista plana para entregados / todos
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {pedidosFiltrados.map(p => (
-              <PedidoCard key={p.id} pedido={p} onEstadoChange={cambiarEstado} />
+            {gruposFiltrados.map(g => (
+              <GrupoCard key={g.ticketId} grupo={g} onEstadoChange={cambiarEstadoGrupo} />
             ))}
           </div>
         )}
