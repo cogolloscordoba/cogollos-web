@@ -421,34 +421,46 @@ function Pedidos({ toast }) {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {filtered.map(p => {
-            const [bg, tc] = estadoBg[p.estado] || estadoBg.pendiente;
-            const fecha = new Date(p.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-            return (
-              <div key={p.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{p.socios?.nombre || "—"}</div>
-                  <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <span>{p.productos?.nombre || "—"} × {p.cantidad}</span>
-                    <span style={{ fontWeight: 600, color: C.green }}>${(p.precio_unitario * p.cantidad).toLocaleString("es-AR")}</span>
-                    <span>{p.metodo_pago}</span>
-                    <span>{p.modalidad === "retiro" ? "Retiro" : "Delivery"}: {p.turno_delivery}</span>
-                    <span>{fecha}</span>
+          {(() => {
+            const grupos = filtered.reduce((acc, p) => {
+              const key = p.ticket_id || p.id;
+              if (!acc[key]) acc[key] = [];
+              acc[key].push(p);
+              return acc;
+            }, {});
+            return Object.entries(grupos).map(([key, items]) => {
+              const p0 = items[0];
+              const [bg, tc] = estadoBg[p0.estado] || estadoBg.pendiente;
+              const fecha = new Date(p0.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+              const total = items.reduce((s, i) => s + (i.precio_unitario * i.cantidad), 0);
+              return (
+                <div key={key} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>{p0.socios?.nombre || "—"}</div>
+                    <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <span>{items.map(i => `${i.productos?.nombre} × ${i.cantidad}`).join(" · ")}</span>
+                      <span style={{ fontWeight: 600, color: C.green }}>${total.toLocaleString("es-AR")}</span>
+                      <span>{p0.metodo_pago}</span>
+                      <span>{p0.modalidad === "retiro" ? "Retiro" : "Delivery"}: {p0.turno_delivery}</span>
+                      <span>{fecha}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{ background: bg, color: tc, borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{p0.estado?.replace("_"," ")}</span>
+                    <select value={p0.estado} onChange={e => {
+                      items.forEach(i => cambiarEstado(i.id, e.target.value));
+                    }} style={{ ...inputStyle, width: "auto", padding: "6px 10px", fontSize: 12 }}>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="preparando">Preparando</option>
+                      <option value="en_camino">En camino</option>
+                      <option value="entregado">Entregado</option>
+                      <option value="cancelado">Cancelado</option>
+                    </select>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <span style={{ background: bg, color: tc, borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{p.estado?.replace("_"," ")}</span>
-                  <select value={p.estado} onChange={e => cambiarEstado(p.id, e.target.value)} style={{ ...inputStyle, width: "auto", padding: "6px 10px", fontSize: 12 }}>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="preparando">Preparando</option>
-                    <option value="en_camino">En camino</option>
-                    <option value="entregado">Entregado</option>
-                    <option value="cancelado">Cancelado</option>
-                  </select>
-                </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       )}
 
@@ -554,33 +566,44 @@ function Delivery({ toast }) {
         <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>No hay entregas pendientes para el {turno}</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {filtrados.map((p, i) => {
-            const dir = p.socios?.direccion;
-            const mapsUrl = dir ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dir)}` : null;
-            return (
-              <div key={p.id} style={{ background: C.white, border: p.estado === "en_camino" ? `2px solid ${C.green}` : `1px solid ${C.border}`, borderRadius: 12, padding: "18px 20px" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.light, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: C.dark, flexShrink: 0 }}>{i+1}</div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{p.socios?.nombre || "—"}</div>
-                      {p.estado === "en_camino" && <span style={{ background: "#E6F1FB", color: "#0C447C", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>En camino</span>}
+          {(() => {
+            const grupos = filtrados.reduce((acc, p) => {
+              const key = p.ticket_id || p.id;
+              if (!acc[key]) acc[key] = [];
+              acc[key].push(p);
+              return acc;
+            }, {});
+            return Object.entries(grupos).map(([key, items], i) => {
+              const p0 = items[0];
+              const dir = p0.socios?.direccion;
+              const mapsUrl = dir ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dir)}` : null;
+              const total = items.reduce((s, i) => s + (i.precio_unitario * i.cantidad), 0);
+              return (
+                <div key={key} style={{ background: C.white, border: p0.estado === "en_camino" ? `2px solid ${C.green}` : `1px solid ${C.border}`, borderRadius: 12, padding: "18px 20px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.light, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: C.dark, flexShrink: 0 }}>{i+1}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{p0.socios?.nombre || "—"}</div>
+                        <span style={{ background: p0.modalidad === "delivery" ? "#E6F1FB" : "#EAF4ED", color: p0.modalidad === "delivery" ? "#0C447C" : "#1A5C2A", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>{p0.modalidad === "delivery" ? "🚴 Delivery" : "🏪 Retiro"}</span>
+                        {p0.estado === "en_camino" && <span style={{ background: "#E6F1FB", color: "#0C447C", borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>En camino</span>}
+                      </div>
+                      <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>
+                        {items.map(i => `${i.productos?.nombre} × ${i.cantidad}`).join(" · ")} · <strong style={{ color: C.dark }}>${total.toLocaleString("es-AR")}</strong> · {p0.metodo_pago}
+                      </div>
+                      {dir && <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>📍 {dir}</div>}
+                      {p0.socios?.telefono && <div style={{ fontSize: 13, color: C.muted }}>Tel: <a href={`https://wa.me/54${p0.socios.telefono}`} target="_blank" rel="noreferrer" style={{ color: C.green, fontWeight: 600 }}>{p0.socios.telefono}</a></div>}
                     </div>
-                    <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>
-                      {p.productos?.nombre} × {p.cantidad} · <strong style={{ color: C.dark }}>${(p.precio_unitario * p.cantidad).toLocaleString("es-AR")}</strong> · {p.metodo_pago}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+                      {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ ...btnSecondary, textAlign: "center", fontSize: 13, textDecoration: "none", display: "block" }}>Ver en Maps</a>}
+                      {p0.estado !== "en_camino" && <button onClick={() => items.forEach(i => marcarEnCamino(i.id))} style={{ ...btnSecondary, fontSize: 13 }}>Salió</button>}
+                      <button onClick={() => items.forEach(i => marcarEntregado(i.id))} style={{ ...btnPrimary, fontSize: 13 }}>Entregado</button>
                     </div>
-                    {dir && <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>📍 {dir}</div>}
-                    {p.socios?.telefono && <div style={{ fontSize: 13, color: C.muted }}>Tel: <a href={`https://wa.me/54${p.socios.telefono}`} target="_blank" rel="noreferrer" style={{ color: C.green, fontWeight: 600 }}>{p.socios.telefono}</a></div>}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
-                    {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" style={{ ...btnSecondary, textAlign: "center", fontSize: 13, textDecoration: "none", display: "block" }}>Ver en Maps</a>}
-                    {p.estado !== "en_camino" && <button onClick={() => marcarEnCamino(p.id)} style={{ ...btnSecondary, fontSize: 13 }}>Salió</button>}
-                    <button onClick={() => marcarEntregado(p.id)} style={{ ...btnPrimary, fontSize: 13 }}>Entregado</button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       )}
     </div>
