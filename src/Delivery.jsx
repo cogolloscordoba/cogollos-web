@@ -154,6 +154,14 @@ function GrupoCard({ grupo, onEstadoChange }) {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 4,
+            background: grupo.modalidad === "delivery" ? "#E6F1FB" : "#EAF4ED",
+            color: grupo.modalidad === "delivery" ? "#0C447C" : "#1A5C2A",
+            borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700,
+          }}>
+            {grupo.modalidad === "delivery" ? "🚴 Delivery" : "🏪 Retiro"}
+          </span>
           <Badge estado={grupo.estado} />
           <span style={{ color: C.muted, fontSize: 16 }}>{expanded ? "▲" : "▼"}</span>
         </div>
