@@ -272,7 +272,7 @@ function DeliveryView({ onLogout }) {
     try {
       // Traer pedidos de modalidad delivery con datos del socio y producto
       const data = await sb(
-        "pedidos?select=*,socios(nombre,telefono,direccion),productos(nombre)&modalidad=eq.delivery&order=created_at.desc"
+        "pedidos?select=*,socios(nombre,telefono,direccion),productos(nombre)&order=created_at.desc"
       );
       const lista = (data || []).map(p => ({
         ...p,
@@ -364,7 +364,7 @@ function DeliveryView({ onLogout }) {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 18 }}>📦</span>
-          <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Delivery</span>
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Pedidos del día</span>
           {contadores.activos > 0 && (
             <span style={{ background: "#6FD67F", color: C.dark, borderRadius: 20, padding: "2px 8px", fontSize: 12, fontWeight: 700 }}>
               {contadores.activos}
