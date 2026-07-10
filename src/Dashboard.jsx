@@ -929,7 +929,13 @@ function Ventas() {
 
   const totalUnidades = filtrados.reduce((s, p) => s + p.cantidad, 0);
   const totalVentas = filtrados.reduce((s, p) => s + (p.precio_unitario || 0) * p.cantidad, 0);
-  const ticketPromedio = filtrados.length ? Math.round(totalVentas / filtrados.length) : 0;
+  const gruposFiltrados = Object.values(filtrados.reduce((acc, p) => {
+    const key = p.ticket_id || p.id;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(p);
+    return acc;
+  }, {}));
+  const ticketPromedio = gruposFiltrados.length ? Math.round(totalVentas / gruposFiltrados.length) : 0;
 
   return (
     <div>
@@ -943,7 +949,7 @@ function Ventas() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px,1fr))", gap: 12, marginBottom: 28 }}>
-        {[["Total vendido",`$${totalVentas.toLocaleString("es-AR")}`,C.dark],["Unidades",totalUnidades,C.green],["Pedidos",filtrados.length,C.text],["Ticket promedio",`$${ticketPromedio.toLocaleString("es-AR")}`,"#8C6B1A"]].map(([l,v,c]) => (
+        {[["Total vendido",`$${totalVentas.toLocaleString("es-AR")}`,C.dark],["Unidades",totalUnidades,C.green],["Pedidos",gruposFiltrados.length,C.text],["Ticket promedio",`$${ticketPromedio.toLocaleString("es-AR")}`,"#8C6B1A"]].map(([l,v,c]) => (
           <div key={l} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px" }}>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{l}</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: c }}>{v}</div>
