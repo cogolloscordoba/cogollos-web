@@ -133,7 +133,15 @@ function Pedidos({ toast }) {
     return !q || p.socios?.nombre?.toLowerCase().includes(q) || p.productos?.nombre?.toLowerCase().includes(q);
   });
 
-  const totalFacturado = pedidos.filter(p => p.estado === "entregado").reduce((s, p) => s + (p.precio_unitario * p.cantidad), 0);
+  // Agrupar todos los pedidos por ticket_id para los contadores
+  const todosGrupos = Object.values(pedidos.reduce((acc, p) => {
+    const key = p.ticket_id || p.id;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(p);
+    return acc;
+  }, {}));
+
+  const totalFacturado = todosGrupos.filter(g => g[0].estado === "entregado").reduce((s, g) => s + g.reduce((gs, p) => gs + (p.precio_unitario * p.cantidad), 0), 0);
 
   return (
     <div>
@@ -143,7 +151,7 @@ function Pedidos({ toast }) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px,1fr))", gap: 12, marginBottom: 24 }}>
-        {[["Total pedidos", pedidos.length, C.text], ["Pendientes", pedidos.filter(p=>p.estado==="pendiente").length, "#8C6B1A"], ["En camino", pedidos.filter(p=>p.estado==="en_camino").length, "#185FA5"], ["Entregados", pedidos.filter(p=>p.estado==="entregado").length, C.green], ["Facturado", `$${totalFacturado.toLocaleString("es-AR")}`, C.dark]].map(([l,v,c]) => (
+        {[["Total pedidos", todosGrupos.length, C.text], ["Pendientes", todosGrupos.filter(g=>g[0].estado==="pendiente").length, "#8C6B1A"], ["En camino", todosGrupos.filter(g=>g[0].estado==="en_camino").length, "#185FA5"], ["Entregados", todosGrupos.filter(g=>g[0].estado==="entregado").length, C.green], ["Facturado", `$${totalFacturado.toLocaleString("es-AR")}`, C.dark]].map(([l,v,c]) => (
           <div key={l} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 18px" }}>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{l}</div>
             <div style={{ fontSize: typeof v === "string" && v.startsWith("$") ? 18 : 26, fontWeight: 700, color: c }}>{v}</div>
