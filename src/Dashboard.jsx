@@ -77,267 +77,6 @@ const inputStyle = { width: "100%", border: `1.5px solid ${C.border}`, borderRad
 const btnPrimary = { background: C.dark, color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: F };
 const btnSecondary = { background: "transparent", color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "10px 20px", fontSize: 14, cursor: "pointer", fontFamily: F };
 
-// ── TICKETS ──────────────────────────────────────────────────────────
-const EQUIPO = ["Irene", "Delivery", "Administrativo", "Stock", "Médica"];
-
-function TicketModal({ ticket, socios, onClose, onSave, toast }) {
-  const [form, setForm] = useState({
-    tipo: ticket?.tipo || "consulta",
-    prioridad: ticket?.prioridad || "media",
-    resumen: ticket?.resumen || "",
-    estado: ticket?.estado || "abierto",
-    asignado_a: ticket?.asignado_a || "",
-    socio_id: ticket?.socio_id || "",
-    telefono: ticket?.telefono || "",
-    notas_internas: ticket?.notas_internas || "",
-  });
-  const [nota, setNota] = useState("");
-  const [saving, setSaving] = useState(false);
-  const historial = ticket?.historial || [];
-
-  const guardar = async () => {
-    setSaving(true);
-    const updates = { ...form, updated_at: new Date().toISOString() };
-    if (ticket?.id) {
-      await sb(`tickets?id=eq.${ticket.id}`, { method: "PATCH", body: JSON.stringify(updates) });
-      toast("Ticket guardado");
-    } else {
-      await sb("tickets", { method: "POST", body: JSON.stringify({ ...updates, id: Date.now().toString(), historial: [] }) });
-      toast("Ticket creado");
-    }
-    onSave();
-    onClose();
-    setSaving(false);
-  };
-
-  const agregarNota = async () => {
-    if (!nota.trim()) return;
-    const nuevaEntrada = { texto: nota, autor: "Equipo", fecha: new Date().toISOString() };
-    const nuevoHistorial = [...historial, nuevaEntrada];
-    await sb(`tickets?id=eq.${ticket.id}`, { method: "PATCH", body: JSON.stringify({ historial: nuevoHistorial, updated_at: new Date().toISOString() }) });
-    setNota("");
-    toast("Nota agregada");
-    onSave();
-  };
-
-  return (
-    <Modal title={ticket?.id ? "Editar ticket" : "Nuevo ticket"} onClose={onClose}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div style={{ gridColumn: "1/-1" }}>
-          <Field label="Resumen">
-            <input value={form.resumen} onChange={e => setForm(f=>({...f, resumen: e.target.value}))} style={inputStyle} />
-          </Field>
-        </div>
-        <Field label="Tipo">
-          <select value={form.tipo} onChange={e => setForm(f=>({...f, tipo: e.target.value}))} style={inputStyle}>
-            <option value="consulta">Consulta</option>
-            <option value="compra">Compra</option>
-            <option value="medica">Médica</option>
-            <option value="seguimiento">Seguimiento</option>
-            <option value="general">General</option>
-            <option value="asociarse">Asociarse</option>
-          </select>
-        </Field>
-        <Field label="Prioridad">
-          <select value={form.prioridad} onChange={e => setForm(f=>({...f, prioridad: e.target.value}))} style={inputStyle}>
-            <option value="baja">Baja</option>
-            <option value="media">Media</option>
-            <option value="alta">Alta</option>
-          </select>
-        </Field>
-        <Field label="Estado">
-          <select value={form.estado} onChange={e => setForm(f=>({...f, estado: e.target.value}))} style={inputStyle}>
-            <option value="abierto">Abierto</option>
-            <option value="en_proceso">En proceso</option>
-            <option value="cerrado">Cerrado</option>
-          </select>
-        </Field>
-        <Field label="Asignado a">
-          <select value={form.asignado_a} onChange={e => setForm(f=>({...f, asignado_a: e.target.value}))} style={inputStyle}>
-            <option value="">Sin asignar</option>
-            {EQUIPO.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </Field>
-        <div style={{ gridColumn: "1/-1" }}>
-          <Field label="Vincular socio">
-            <select value={form.socio_id} onChange={e => setForm(f=>({...f, socio_id: e.target.value}))} style={inputStyle}>
-              <option value="">Sin socio vinculado</option>
-              {socios.map(s => <option key={s.id} value={s.id}>{s.nombre} · DNI {s.dni}</option>)}
-            </select>
-          </Field>
-        </div>
-        <div style={{ gridColumn: "1/-1" }}>
-          <Field label="Teléfono">
-            <input value={form.telefono} onChange={e => setForm(f=>({...f, telefono: e.target.value}))} style={inputStyle} placeholder="Ej: 3512345678" />
-          </Field>
-        </div>
-        <div style={{ gridColumn: "1/-1" }}>
-          <Field label="Notas internas">
-            <textarea value={form.notas_internas} onChange={e => setForm(f=>({...f, notas_internas: e.target.value}))} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} placeholder="Notas privadas del equipo..." />
-          </Field>
-        </div>
-      </div>
-
-      {ticket?.id && historial.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Historial</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 180, overflowY: "auto" }}>
-            {historial.map((h, i) => (
-              <div key={i} style={{ background: C.pale, borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>
-                <div style={{ color: C.text, marginBottom: 3 }}>{h.texto}</div>
-                <div style={{ color: C.muted, fontSize: 11 }}>{h.autor} · {new Date(h.fecha).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {ticket?.id && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Agregar nota al historial</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input value={nota} onChange={e => setNota(e.target.value)} placeholder="Escribí una nota..." style={{ ...inputStyle, flex: 1 }} onKeyDown={e => e.key === "Enter" && agregarNota()} />
-            <button onClick={agregarNota} style={{ ...btnPrimary, padding: "9px 16px", fontSize: 13 }}>Agregar</button>
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={onClose} style={{ ...btnSecondary, flex: 1 }}>Cancelar</button>
-        <button onClick={guardar} disabled={saving} style={{ ...btnPrimary, flex: 1 }}>{saving ? "Guardando..." : ticket?.id ? "Guardar cambios" : "Crear ticket"}</button>
-      </div>
-    </Modal>
-  );
-}
-
-function Tickets({ toast }) {
-  const [tickets, setTickets] = useState([]);
-  const [socios, setSocios] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("todos");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [modalTicket, setModalTicket] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const PER = 15;
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [data, socs] = await Promise.all([
-      sb("tickets?select=*,socios(nombre,direccion,dni)&order=created_at.desc"),
-      sb("socios?select=id,nombre,dni,estado&order=nombre"),
-    ]);
-    setTickets(Array.isArray(data) ? data : []);
-    setSocios(Array.isArray(socs) ? socs : []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const abrirNuevo = () => { setModalTicket(null); setShowModal(true); };
-  const abrirEditar = (t) => { setModalTicket(t); setShowModal(true); };
-
-  const cambiarEstado = async (id, estado) => {
-    await sb(`tickets?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
-    setTickets(ts => ts.map(t => t.id === id ? { ...t, estado } : t));
-    toast("Estado actualizado");
-  };
-
-  const filters = ["todos", "compra", "medica", "general", "seguimiento", "alta"];
-  const labels = { todos: "Todos", compra: "Compras", medica: "Médica", general: "General", seguimiento: "Seguimiento", alta: "Alta prioridad" };
-  const tipoBg = { compra: ["#EAF3DE","#27500A"], general: ["#E6F1FB","#0C447C"], medica: ["#FAEEDA","#633806"], seguimiento: ["#EEEDFE","#3C3489"], consulta: ["#F1EFE8","#444441"], asociarse: ["#FBEAF0","#72243E"] };
-  const prioDot = { alta: "#E24B4A", media: "#EF9F27", baja: "#639922" };
-
-  const filtered = tickets.filter(t => {
-    const mf = filter === "todos" ? true : filter === "alta" ? t.prioridad === "alta" : t.tipo === filter;
-    const q = search.toLowerCase();
-    const ms = !q || t.resumen?.toLowerCase().includes(q) || t.socios?.nombre?.toLowerCase().includes(q) || t.asignado_a?.toLowerCase().includes(q);
-    return mf && ms;
-  });
-  const pages = Math.ceil(filtered.length / PER);
-  const paged = filtered.slice((page-1)*PER, page*PER);
-
-  const stats = { total: tickets.length, compras: tickets.filter(t=>t.tipo==="compra").length, medica: tickets.filter(t=>t.tipo==="medica").length, alta: tickets.filter(t=>t.prioridad==="alta").length };
-
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Tickets</h2>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={load} style={{ ...btnSecondary, padding: "7px 14px", fontSize: 13 }}>Actualizar</button>
-          <button onClick={abrirNuevo} style={btnPrimary}>+ Nuevo ticket</button>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px,1fr))", gap: 12, marginBottom: 24 }}>
-        {[["Total", stats.total, C.text], ["Compras", stats.compras, C.green], ["Médica", stats.medica, "#8C6B1A"], ["Alta prioridad", stats.alta, "#991B1B"]].map(([l,v,c]) => (
-          <div key={l} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 18px" }}>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{l}</div>
-            <div style={{ fontSize: 26, fontWeight: 700, color: c }}>{v}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14, alignItems: "center" }}>
-        {filters.map(f => (
-          <button key={f} onClick={() => { setFilter(f); setPage(1); }} style={{ padding: "5px 14px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: filter===f ? "none" : `1px solid ${C.border}`, background: filter===f ? C.dark : C.white, color: filter===f ? "#fff" : C.muted, fontFamily: F }}>{labels[f]}</button>
-        ))}
-        <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar..." style={{ ...inputStyle, width: 180, marginLeft: "auto" }} />
-      </div>
-
-      {loading ? <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Cargando...</div> : paged.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Sin tickets</div> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {paged.map(t => {
-            const tipo = t.tipo || "consulta";
-            const [tbg, tc] = tipoBg[tipo] || tipoBg.consulta;
-            const fecha = new Date(t.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-            const tieneNotas = t.historial?.length > 0 || t.notas_internas;
-            return (
-              <div key={t.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: prioDot[t.prioridad] || prioDot.media, flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 400 }}>{t.resumen || "(sin resumen)"}</div>
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 12, color: C.muted, alignItems: "center" }}>
-                    <span style={{ background: tbg, color: tc, borderRadius: 20, padding: "2px 8px", fontWeight: 600 }}>{tipo}</span>
-                    <span>{t.socios?.nombre || (t.telefono ? `Tel: ${t.telefono}` : "—")}</span>
-                    {t.asignado_a && <span style={{ background: C.light, color: C.dark, borderRadius: 20, padding: "2px 8px", fontWeight: 500 }}>{t.asignado_a}</span>}
-                    {tieneNotas && <span style={{ color: C.green, fontSize: 11, fontWeight: 600 }}>con notas</span>}
-                    <span>{fecha}</span>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <select value={t.estado || "abierto"} onChange={e => cambiarEstado(t.id, e.target.value)} style={{ ...inputStyle, width: "auto", padding: "6px 10px" }}>
-                    <option value="abierto">Abierto</option>
-                    <option value="en_proceso">En proceso</option>
-                    <option value="cerrado">Cerrado</option>
-                  </select>
-                  <button onClick={() => abrirEditar(t)} style={{ ...btnSecondary, padding: "6px 14px", fontSize: 12 }}>Ver</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {pages > 1 && (
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16, alignItems: "center" }}>
-          <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1} style={{ ...btnSecondary, padding: "5px 12px" }}>‹</button>
-          <span style={{ fontSize: 13, color: C.muted }}>Página {page} de {pages} · {filtered.length} tickets</span>
-          <button onClick={() => setPage(p => Math.min(pages,p+1))} disabled={page===pages} style={{ ...btnSecondary, padding: "5px 12px" }}>›</button>
-        </div>
-      )}
-      {showModal && (
-        <TicketModal
-          ticket={modalTicket}
-          socios={socios}
-          onClose={() => setShowModal(false)}
-          onSave={load}
-          toast={toast}
-        />
-      )}
-    </div>
-  );
-}
-
 // ── PEDIDOS ──────────────────────────────────────────────────────────
 function Pedidos({ toast }) {
   const [pedidos, setPedidos] = useState([]);
@@ -1094,33 +833,43 @@ function Facturacion({ toast }) {
         </div>
         {loading ? <div style={{ padding: "40px 0", textAlign: "center", color: C.muted }}>Cargando...</div>
           : filtrados.length === 0 ? <div style={{ padding: "40px 0", textAlign: "center", color: C.muted }}>Sin pedidos en este filtro</div>
-          : filtrados.map(p => {
-            const total = (p.precio_unitario || 0) * p.cantidad;
-            const fecha = new Date(p.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-            return (
-              <div key={p.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ fontSize: 12, color: C.muted, width: 50, flexShrink: 0 }}>#{p.numero_orden || "—"}</div>
-                <div style={{ flex: 1, minWidth: 180 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 2 }}>{p.socios?.nombre || "—"}</div>
-                  <div style={{ fontSize: 11, color: C.muted, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {p.socios?.cuit && <span>CUIT {p.socios.cuit}</span>}
-                    <span>{p.productos?.nombre || "—"} × {p.cantidad}</span>
-                    <span style={{ textTransform: "capitalize" }}>{p.metodo_pago}</span>
-                    <span>{fecha}</span>
+          : (() => {
+              const grupos = filtrados.reduce((acc, p) => {
+                const key = p.ticket_id || p.id;
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(p);
+                return acc;
+              }, {});
+              return Object.entries(grupos).map(([key, items]) => {
+                const p0 = items[0];
+                const total = items.reduce((s, i) => s + (i.precio_unitario || 0) * i.cantidad, 0);
+                const fecha = new Date(p0.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+                const pagado = items.every(i => i.pagado);
+                const facturado = items.every(i => i.facturado);
+                return (
+                  <div key={key} style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ flex: 1, minWidth: 180 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 2 }}>{p0.socios?.nombre || "—"}</div>
+                      <div style={{ fontSize: 11, color: C.muted, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {p0.socios?.cuit && <span>CUIT {p0.socios.cuit}</span>}
+                        <span>{items.map(i => `${i.productos?.nombre} × ${i.cantidad}`).join(" · ")}</span>
+                        <span style={{ textTransform: "capitalize" }}>{p0.metodo_pago}</span>
+                        <span>{fecha}</span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, minWidth: 90, textAlign: "right" }}>${total.toLocaleString("es-AR")}</div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => items.forEach(i => marcarCobrado(i.id, !pagado))} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "none", background: pagado?"#EAF3DE":"#F1EFE8", color: pagado?"#27500A":"#888", minWidth: 80 }}>
+                        {pagado ? "Cobrado" : "Sin cobrar"}
+                      </button>
+                      <button onClick={() => pagado && items.forEach(i => marcarFacturado(i.id, !facturado))} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: pagado?"pointer":"not-allowed", fontFamily: F, border: "none", background: facturado?"#E6F1FB":pagado?"#FAEEDA":"#F5F5F5", color: facturado?"#0C447C":pagado?"#633806":"#ccc", minWidth: 80, opacity: pagado?1:0.5 }}>
+                        {facturado ? "Facturado" : "Facturar"}
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, minWidth: 90, textAlign: "right" }}>${total.toLocaleString("es-AR")}</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => marcarCobrado(p.id, !p.pagado)} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: F, border: "none", background: p.pagado?"#EAF3DE":"#F1EFE8", color: p.pagado?"#27500A":"#888", minWidth: 80 }}>
-                    {p.pagado ? "Cobrado" : "Sin cobrar"}
-                  </button>
-                  <button onClick={() => p.pagado && marcarFacturado(p.id, !p.facturado)} style={{ padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: p.pagado?"pointer":"not-allowed", fontFamily: F, border: "none", background: p.facturado?"#E6F1FB":p.pagado?"#FAEEDA":"#F5F5F5", color: p.facturado?"#0C447C":p.pagado?"#633806":"#ccc", minWidth: 80, opacity: p.pagado?1:0.5 }}>
-                    {p.facturado ? "Facturado" : "Facturar"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                );
+              });
+            })()}
       </div>
     </div>
   );
@@ -1236,14 +985,13 @@ function Ventas() {
 
 export default function Dashboard({ onLogout }) {
   const isMobile = useIsMobile();
-  const [seccion, setSeccion] = useState("tickets");
+  const [seccion, setSeccion] = useState("pedidos");
   const [toastMsg, setToastMsg] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
 
   const toast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(""), 2500); };
 
   const secciones = [
-    { id: "tickets", label: "Tickets" },
     { id: "pedidos", label: "Pedidos" },
     { id: "delivery", label: "Delivery" },
     { id: "facturacion", label: "Facturación" },
@@ -1288,7 +1036,6 @@ export default function Dashboard({ onLogout }) {
 
       {/* Contenido */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "24px 4%" : "32px 6%" }}>
-        {seccion === "tickets" && <Tickets toast={toast} />}
         {seccion === "pedidos" && <Pedidos toast={toast} />}
         {seccion === "delivery" && <Delivery toast={toast} />}
         {seccion === "facturacion" && <Facturacion toast={toast} />}
