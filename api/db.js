@@ -1,48 +1,66 @@
 const SB_URL = process.env.SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_KEY;
 
-// Lista blanca de rutas permitidas
-const ALLOWED = [
-  /^productos/,
-  /^socios/,
-  /^pedidos/,
-  /^tickets/,
-  /^rpc\/login_socio_v3/,
-  /^rpc\/dni_existe/,
-  /^rpc\/pedidos_de_socio/,
-];
+// Rate limiting en memoria: ip -> { count, firstAttempt }
+const attempts = new Map();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+
+function getRateLimit(ip) {
+  const now = Date.now();
+  const entry = attempts.get(ip);
+  if (!entry || now - entry.firstAttempt > WINDOW_MS) {
+    attempts.set(ip, { count: 1, firstAttempt: now });
+    return { blocked: false, remaining: MAX_ATTEMPTS - 1 };
+  }
+  entry.count++;
+  if (entry.count > MAX_ATTEMPTS) {
+    const retryAfter = Math.ceil((entry.firstAttempt + WINDOW_MS - now) / 1000);
+    return { blocked: true, retryAfter };
+  }
+  return { blocked: false, remaining: MAX_ATTEMPTS - entry.count };
+}
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://cogolloscordoba.ar");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Prefer");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  // path viene como ?path=productos?select=*
-  const path = req.query.path;
-  if (!path) return res.status(400).json({ error: "Falta path" });
+  // Rate limiting por IP
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
+  const limit = getRateLimit(ip);
+  if (limit.blocked) {
+    return res.status(429).json({
+      error: `Demasiados intentos. Esperá ${Math.ceil(limit.retryAfter / 60)} minutos.`
+    });
+  }
 
-  // Verificar que la ruta esté en la lista blanca
-  const allowed = ALLOWED.some(r => r.test(path));
-  if (!allowed) return res.status(403).json({ error: "Ruta no permitida" });
+  const { email, password, refresh_token } = req.body || {};
 
-  // Pasar el token del usuario si viene, sino usar la key
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : SB_KEY;
+  // Refresh token
+  if (refresh_token) {
+    const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: "POST",
+      headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token }),
+    });
+    if (!r.ok) return res.status(401).json({ error: "Token expirado" });
+    const data = await r.json();
+    return res.status(200).json({ access_token: data.access_token, refresh_token: data.refresh_token });
+  }
 
-  const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
-    method: req.method,
-    headers: {
-      apikey: SB_KEY,
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(req.headers.prefer ? { Prefer: req.headers.prefer } : {}),
-    },
-    ...(req.body && Object.keys(req.body).length ? { body: JSON.stringify(req.body) } : {}),
+  // Login normal
+  if (!email || !password) return res.status(400).json({ error: "Faltan credenciales" });
+
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
   });
 
-  const text = await r.text();
-  const contentRange = r.headers.get("content-range");
-  if (contentRange) res.setHeader("content-range", contentRange);
-  res.status(r.status).send(text);
+  if (!r.ok) return res.status(401).json({ error: "Credenciales incorrectas" });
+  const data = await r.json();
+  return res.status(200).json({ access_token: data.access_token, refresh_token: data.refresh_token });
 }
