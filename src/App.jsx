@@ -3,23 +3,27 @@ import Dashboard from "./Dashboard";
 import Delivery from "./Delivery";
 
 // ─── Supabase ────────────────────────────────────────────────────────
-const SB_URL = "https://mphiidkjfjxcqrrfbpfu.supabase.co";
-const SB_KEY = "sb_publishable_0KnWV0e08GR6v1pCv-LQ6w_JGVGrc8a";
+// ─── API proxy — nunca expone la key de Supabase ────────────────────
 const sb = async (path, opts = {}) => {
-  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+  const token = sessionStorage.getItem("cogo_admin_token");
+  const res = await fetch(`/api/db?path=${encodeURIComponent(path)}`, {
     ...opts,
-    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", ...opts.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(opts.headers || {}),
+    },
   });
   if (!res.ok) throw new Error(await res.text());
   const text = await res.text();
   return text ? JSON.parse(text) : null;
 };
 
-// ─── Login admin via Supabase Auth ──────────────────────────────────
+// ─── Login admin via API proxy ───────────────────────────────────────
 async function loginAdminSupabase(email, password) {
-  const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+  const res = await fetch("/api/login", {
     method: "POST",
-    headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) return null;

@@ -1,30 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 
-const SB_URL = "https://mphiidkjfjxcqrrfbpfu.supabase.co";
-const SB_KEY = "sb_publishable_0KnWV0e08GR6v1pCv-LQ6w_JGVGrc8a";
-
+// ─── API proxy ───────────────────────────────────────────────────────
 const sb = async (path, opts = {}) => {
-  // Usa el token del admin autenticado si existe; si no, cae a la anon key.
-  // Esto permite que las políticas RLS reconozcan al admin como usuario logueado.
-  const token = sessionStorage.getItem("cogo_admin_token") || SB_KEY;
-  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+  const token = sessionStorage.getItem("cogo_admin_token");
+  const res = await fetch(`/api/db?path=${encodeURIComponent(path)}`, {
     ...opts,
     headers: {
-      apikey: SB_KEY,
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      Prefer: opts.method === "POST" ? "return=representation" : "return=minimal",
-      ...opts.headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(opts.headers || {}),
     },
   });
   if (res.status === 401 || res.status === 403) {
-    // Sesión vencida o sin permisos: forzar re-login del admin.
     sessionStorage.removeItem("cogo_admin");
     sessionStorage.removeItem("cogo_admin_token");
     throw new Error("Tu sesión expiró. Por favor, volvé a iniciar sesión.");
   }
-  if (res.status === 204 || res.headers.get("content-length") === "0") return null;
-  return res.json();
+  if (!res.ok) throw new Error(await res.text());
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 };
 
 const C = {

@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 
 // ─── Config ──────────────────────────────────────────────────────────
-const SB_URL = "https://mphiidkjfjxcqrrfbpfu.supabase.co";
-const SB_KEY = "sb_publishable_0KnWV0e08GR6v1pCv-LQ6w_JGVGrc8a";
-
+// ─── API proxy ───────────────────────────────────────────────────────
 async function refreshToken() {
   const refresh = sessionStorage.getItem("cogo_refresh_token");
   if (!refresh) return null;
-  const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+  const res = await fetch("/api/login", {
     method: "POST",
-    headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh_token: refresh }),
   });
   if (!res.ok) return null;
@@ -23,13 +21,16 @@ async function refreshToken() {
 }
 
 const sb = async (path, opts = {}) => {
-  let token = sessionStorage.getItem("cogo_admin_token") || SB_KEY;
-  const doReq = async (t) => fetch(`${SB_URL}/rest/v1/${path}`, {
+  let token = sessionStorage.getItem("cogo_admin_token");
+  const doReq = async (t) => fetch(`/api/db?path=${encodeURIComponent(path)}`, {
     ...opts,
-    headers: { apikey: SB_KEY, Authorization: `Bearer ${t}`, "Content-Type": "application/json", ...opts.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(t ? { Authorization: `Bearer ${t}` } : {}),
+      ...(opts.headers || {}),
+    },
   });
   let res = await doReq(token);
-  // Si el token venció, refrescamos y reintentamos una vez
   if (res.status === 401) {
     const newToken = await refreshToken();
     if (newToken) {
@@ -43,9 +44,9 @@ const sb = async (path, opts = {}) => {
 };
 
 async function loginAdmin(email, password) {
-  const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+  const res = await fetch("/api/login", {
     method: "POST",
-    headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) return null;
