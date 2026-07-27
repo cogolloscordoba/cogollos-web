@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 
 // ─── Config ──────────────────────────────────────────────────────────
 const SB_URL = "https://mphiidkjfjxcqrrfbpfu.supabase.co";
-const SB_KEY = "sb_publishable_sKq0rU3ft8rEHCO8MeF0Kg_ciDXTfpz";
+const SB_KEY = "sb_publishable_0KnWV0e08GR6v1pCv-LQ6w_JGVGrc8a";
 
 async function refreshToken() {
   const refresh = sessionStorage.getItem("cogo_refresh_token");
