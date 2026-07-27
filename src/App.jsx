@@ -4,7 +4,7 @@ import Delivery from "./Delivery";
 
 // ─── Supabase ────────────────────────────────────────────────────────
 const SB_URL = "https://mphiidkjfjxcqrrfbpfu.supabase.co";
-const SB_KEY = "sb_publishable_sKq0rU3ft8rEHCO8MeF0Kg_ciDXTfp";
+const SB_KEY = "sb_publishable_0KnWV0e08GR6v1pCv-LQ6w_JGVGrc8a";
 const sb = async (path, opts = {}) => {
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
     ...opts,
