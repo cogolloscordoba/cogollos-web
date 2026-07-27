@@ -1028,6 +1028,11 @@ export default function App() {
   const [socio, setSocio] = useState(null);
   const [adminLoggedIn, setAdminLoggedIn] = useState(() => sessionStorage.getItem("cogo_admin") === "1");
 
+  useEffect(() => {
+    const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos", "#/delivery": "Delivery · Cogollos" };
+    document.title = titles[hash] || "Cogollos Córdoba";
+  }, [hash]);
+
   // Detectar token de recovery en la URL
   const urlParams = new URLSearchParams(window.location.hash.slice(1));
   const accessToken = urlParams.get("access_token");
@@ -1036,10 +1041,6 @@ export default function App() {
     return <ResetPassword token={accessToken} />;
   }
 
-  useEffect(() => {
-    const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos", "#/delivery": "Delivery · Cogollos" };
-    document.title = titles[hash] || "Cogollos Córdoba";
-  }, [hash]);
 
   if (hash === "#/admin") {
     if (!adminLoggedIn) return <LoginAdmin onLogin={() => setAdminLoggedIn(true)} />;
