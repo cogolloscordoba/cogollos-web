@@ -61,6 +61,72 @@ function useHash() {
   return hash;
 }
 
+// ─── Reset de contraseña ──────────────────────────────────────────────
+function ResetPassword({ token }) {
+  const [pass, setPass] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [ok, setOk] = useState(false);
+
+  const handleReset = async (e) => {
+    e.preventDefault();
+    if (pass.length < 8) { setError("La contraseña debe tener al menos 8 caracteres"); return; }
+    if (pass !== confirm) { setError("Las contraseñas no coinciden"); return; }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: token, password: pass }),
+      });
+      if (!res.ok) throw new Error("Error al cambiar la contraseña");
+      setOk(true);
+    } catch (e) {
+      setError("Hubo un error. Pedí un nuevo link de recuperación.");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, fontFamily: F, padding: "0 6%" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <img src="/logo.png" alt="Cogollos" style={{ height: 56, marginBottom: 16 }} />
+          <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, letterSpacing: "0.1em" }}>NUEVA CONTRASEÑA</div>
+        </div>
+        <div style={{ background: C.white, borderRadius: 16, border: `1.5px solid ${C.border}`, padding: "36px 32px" }}>
+          {ok ? (
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 36, marginBottom: 16 }}>✅</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 8 }}>¡Contraseña actualizada!</div>
+              <p style={{ color: C.muted, fontSize: 14, marginBottom: 24 }}>Ya podés entrar al panel con tu nueva contraseña.</p>
+              <button onClick={() => window.location.href = "/#/admin"} style={{ ...btnGreen, width: "100%", padding: 14 }}>Ir al panel</button>
+            </div>
+          ) : (
+            <form onSubmit={handleReset}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Nueva contraseña</label>
+                <input type="password" value={pass} onChange={e => setPass(e.target.value)} autoFocus style={{ width: "100%", border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "12px 14px", fontSize: 15, fontFamily: F, color: C.text, background: C.white, outline: "none" }} />
+              </div>
+              <div style={{ marginBottom: 22 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Confirmar contraseña</label>
+                <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} style={{ width: "100%", border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "12px 14px", fontSize: 15, fontFamily: F, color: C.text, background: C.white, outline: "none" }} />
+              </div>
+              {error && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", color: "#991B1B", fontSize: 13, marginBottom: 18 }}>{error}</div>}
+              <button type="submit" disabled={loading} style={{ ...btnGreen, width: "100%", padding: 14, opacity: loading ? 0.6 : 1 }}>
+                {loading ? "Guardando..." : "Guardar contraseña"}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Estilos compartidos ─────────────────────────────────────────────
 const inputStyle = {
   width: "100%", border: `1.5px solid ${C.border}`, borderRadius: 10,
@@ -961,6 +1027,14 @@ export default function App() {
   const hash = useHash();
   const [socio, setSocio] = useState(null);
   const [adminLoggedIn, setAdminLoggedIn] = useState(() => sessionStorage.getItem("cogo_admin") === "1");
+
+  // Detectar token de recovery en la URL
+  const urlParams = new URLSearchParams(window.location.hash.slice(1));
+  const accessToken = urlParams.get("access_token");
+  const tokenType = urlParams.get("type");
+  if (accessToken && tokenType === "recovery") {
+    return <ResetPassword token={accessToken} />;
+  }
 
   useEffect(() => {
     const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos", "#/delivery": "Delivery · Cogollos" };
