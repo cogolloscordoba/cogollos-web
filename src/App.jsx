@@ -546,7 +546,7 @@ function FormularioAlta() {
       <div style={{ maxWidth: 560, margin: "0 auto", padding: isMobile ? "32px 4%" : "48px 6%" }}>
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 8 }}>Quiero asociarme</h1>
-          <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.7 }}>Completá el formulario y el equipo te va a contactar para coordinar la consulta médica, que es el paso previo a tu vinculación con la ONG.</p>
+          <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.7 }}>Antes de tu cita médica necesitamos que tus datos estén actualizados en nuestro sistema. Completá este formulario y avanzá con el siguiente paso.</p>
         </div>
         <div style={{ display: "flex", gap: 8, marginBottom: 32 }}>
           {[1, 2].map(s => (
