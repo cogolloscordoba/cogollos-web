@@ -515,7 +515,7 @@ function FormularioAlta() {
           <div style={{ fontSize: 40, marginBottom: 16 }}>🌿</div>
           <h2 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 12 }}>¡Recibimos tu solicitud!</h2>
           <p style={{ color: C.body, fontSize: 15, lineHeight: 1.7, marginBottom: 16 }}>
-            Gracias por dar el primer paso. <strong>Te vamos a acompañar en todo el proceso de vinculación</strong>, que incluye el alta en REPROCANN y la consulta con nuestro director médico.
+            Estás cada vez más cerca de tener tu Reprocann asociado a Cogollos Córdoba <strong>Te vamos a acompañar en todo el proceso de vinculación</strong>
           </p>
           <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 28 }}>
             Los datos que nos dejaste se usan únicamente para gestionar tu <strong>alta en REPROCANN</strong> y coordinar tu <strong>consulta médica</strong>. Tu privacidad es importante para nosotros.
