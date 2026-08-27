@@ -748,9 +748,9 @@ function LoginSocios({ onLogin }) {
 
 // ─── LANDING ──────────────────────────────────────────────────────────
 const PASOS = [
-  { num: "01", titulo: "Alta en Mi Argentina y REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente, tipo de cultivo Otro, y copiá tu código de vinculación. Sacá una captura donde figuren tus datos y tu código de vinculación y envíanosla por WhatsApp.", link: "https://reprocann.msal.gob.ar/" },
-  { num: "02", titulo: "Consulta médica", desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación.", link: "#/asociarse" },
-  { num: "03", titulo: "Vinculación en Cannalizar", desc: "Ya estamos cerca: completá la ficha médica y se te asignará un turno para hablar con nuestra dirección médica (horario a convenir). La consulta médica tiene un costo de $80.000 — con descuento asociativo pagás $40.000." },
+{ num: "01", titulo: "Alta en Mi Argentina y REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente, tipo de cultivo Otro, y copiá tu código de vinculación. Sacá una captura donde figuren tus datos y tu código de vinculación y envíanosla por WhatsApp.", link: "https://reprocann.msal.gob.ar/" },
+{ num: "02", titulo: "Consulta médica", desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación." },
+{ num: "03", titulo: "Vinculación en Cannalizar", desc: "Ya estamos cerca: completá la ficha médica y se te asignará un turno para hablar con nuestra dirección médica (horario a convenir). La consulta médica tiene un costo de $80.000 — con descuento asociativo pagás $40.000." },
 ];
 
 function Landing() {
