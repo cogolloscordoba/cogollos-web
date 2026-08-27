@@ -506,15 +506,6 @@ function FormularioAlta() {
 
   const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" };
 
-  // Noindex/nofollow para el formulario
-  useEffect(() => {
-    const meta = document.createElement("meta");
-    meta.name = "robots";
-    meta.content = "noindex, nofollow";
-    document.head.appendChild(meta);
-    return () => document.head.removeChild(meta);
-  }, []);
-
   if (enviado) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, fontFamily: F, padding: "40px 6%" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
@@ -748,9 +739,9 @@ function LoginSocios({ onLogin }) {
 
 // ─── LANDING ──────────────────────────────────────────────────────────
 const PASOS = [
-{ num: "01", titulo: "Alta en Mi Argentina y REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente, tipo de cultivo Otro, y copiá tu código de vinculación. Sacá una captura donde figuren tus datos y tu código de vinculación y envíanosla por WhatsApp.", link: "https://reprocann.msal.gob.ar/" },
-{ num: "02", titulo: "Consulta médica", desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación." },
-{ num: "03", titulo: "Vinculación en Cannalizar", desc: "Ya estamos cerca: completá la ficha médica y se te asignará un turno para hablar con nuestra dirección médica (horario a convenir). La consulta médica tiene un costo de $80.000 — con descuento asociativo pagás $40.000." },
+  { num: "01", titulo: "Alta en Mi Argentina y REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente, tipo de cultivo Otro, y copiá tu código de vinculación. Sacá una captura donde figuren tus datos y tu código de vinculación y envíanosla por WhatsApp.", link: "https://reprocann.msal.gob.ar/" },
+  { num: "02", titulo: "Consulta médica", desc: "Completá el formulario con tus datos para que la ONG pueda coordinar tu vinculación. Escribinos al WhatsApp y coordinamos." },
+  { num: "03", titulo: "Vinculación en Cannalizar", desc: "Ya estamos cerca: completá la ficha médica y se te asignará un turno para hablar con nuestra dirección médica (horario a convenir). La consulta médica tiene un costo de $80.000 — con descuento asociativo pagás $40.000." },
 ];
 
 function Landing() {
@@ -811,7 +802,8 @@ function Landing() {
               Trabajamos en conjunto con INTA, UTN y UNC para garantizar la mejor calidad en cada variedad. No cobramos inscripción ni membresía mensual — solo la medicina que retirás.
             </p>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
-              <button onClick={() => window.location.hash = "#/socios"} style={{ ...btnGreen, padding: isMobile ? "13px 22px" : "14px 28px", fontSize: isMobile ? 14 : 15, width: isMobile ? "100%" : "auto" }}>Acceso socios →</button>
+  
+              <button onClick={() => window.location.hash = "#/socios"} style={{ background: "transparent", color: C.green, border: `2px solid ${C.green}`, borderRadius: 10, padding: isMobile ? "13px 22px" : "14px 28px", fontFamily: F, fontWeight: 700, fontSize: isMobile ? 14 : 15, cursor: "pointer", width: isMobile ? "100%" : "auto" }}>Acceso socios →</button>
             </div>
             <div style={{ display: "inline-block", background: C.light, color: C.dark, borderRadius: 8, padding: "12px 20px", fontSize: isMobile ? 14 : 16, fontWeight: 700 }}>
               Sin membresía mensual · Sin costo de inscripción
@@ -927,7 +919,7 @@ function Landing() {
             </div>
             <div>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, marginBottom: 16 }}>Navegación</div>
-              {[["Inicio","inicio"],["Nosotros","nosotros"],["Cómo funciona","como-funciona"],["Asociarse","asociarse"]].map(([l,id]) => (
+              {[["Inicio","inicio"],["Nosotros","nosotros"],["Cómo funciona","como-funciona"]].map(([l,id]) => (
                 <div key={id} style={{ marginBottom: 8 }}><button onClick={() => document.getElementById(id)?.scrollIntoView({behavior:"smooth"})} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.55)", cursor: "pointer", fontSize: 13, fontFamily: F, padding: 0 }}>{l}</button></div>
               ))}
             </div>
@@ -960,7 +952,7 @@ function Autocultivo() {
 
   const pasos = [
     { num: "01", titulo: "Registrate en REPROCANN", desc: "Ingresá a reprocann.msal.gob.ar con tu cuenta de Mi Argentina. Elegí perfil Paciente y tipo de cultivo Autocultivo. Completá tus datos y guardá tu código de vinculación.", link: "https://reprocann.msal.gob.ar/", linkText: "Ir a REPROCANN" },
-    { num: "02", titulo: "Consulta con un médico", desc: "REPROCANN requiere que un médico avale tu solicitud. Podés agendar una consulta virtual con nuestro director médico para obtener el aval necesario, sin necesidad de asociarte a Cogollos.", link: "#/asociarse", linkText: "Completar formulario →" },
+    { num: "02", titulo: "Consulta con un médico", desc: "REPROCANN requiere que un médico avale tu solicitud. Podés agendar una consulta virtual con nuestro director médico para obtener el aval necesario. Escribinos al WhatsApp y coordinamos." },
     { num: "03", titulo: "Presentá la documentación", desc: "Con el aval médico completás tu registro en REPROCANN. Una vez aprobado, tenés habilitación legal para cultivar hasta 9 plantas de cannabis para uso personal." },
     { num: "04", titulo: "Empezá a cultivar", desc: "Con tu REPROCANN aprobado podés cultivar de forma legal en tu domicilio. Si en algún momento querés sumarte a nuestra asociación para acceder a flor seca de calidad, las puertas están abiertas." },
   ];
@@ -984,7 +976,7 @@ function Autocultivo() {
           <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 24 }}>GUÍA DE AUTOCULTIVO</div>
           <h1 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 700, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>Cultivá tu cannabis de manera legal</h1>
           <p style={{ color: "rgba(255,255,255,0.7)", fontSize: isMobile ? 15 : 17, lineHeight: 1.75, marginBottom: 32 }}>Si querés cultivar para uso personal, REPROCANN te da el respaldo legal para hacerlo. Te explicamos el proceso completo, paso a paso.</p>
-          <button onClick={() => window.location.hash = "#/asociarse"} style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, border: "none", cursor: "pointer" }}>Completar formulario →</button>
+          <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Consultanos por WhatsApp →</a>
         </div>
       </div>
       <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.white }}>
@@ -1020,7 +1012,7 @@ function Autocultivo() {
       <div style={{ padding: isMobile ? "60px 6%" : "80px 6%", background: C.dark, textAlign: "center" }}>
         <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 700, color: "#fff", marginBottom: 16 }}>¿Preferís no cultivar vos mismo?</h2>
         <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, marginBottom: 32, maxWidth: 480, margin: "0 auto 32px" }}>Como socio de Cogollos, nuestro equipo cultiva por vos. Retirás tu flor seca sin ocuparte del cultivo, con trazabilidad y calidad garantizada.</p>
-        <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: "#6FD67F", color: C.text, border: "none", borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Quiero asociarme a Cogollos</button>
+        <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#6FD67F", color: C.text, borderRadius: 10, padding: "13px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, textDecoration: "none" }}>Consultanos por WhatsApp →</a>
       </div>
       <footer style={{ background: "#000", padding: "24px 6%", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
         <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>© 2026 Asociación Civil Cogollos Córdoba</span>
@@ -1037,7 +1029,7 @@ export default function App() {
   const [adminLoggedIn, setAdminLoggedIn] = useState(() => sessionStorage.getItem("cogo_admin") === "1");
 
   useEffect(() => {
-    const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/asociarse": "Asociarse · Cogollos", "#/delivery": "Delivery · Cogollos" };
+    const titles = { "#/admin": "Panel · Cogollos", "#/socios": "Socios · Cogollos", "#/autocultivo": "Autocultivo · Cogollos", "#/delivery": "Delivery · Cogollos" };
     document.title = titles[hash] || "Cogollos Córdoba";
   }, [hash]);
 
