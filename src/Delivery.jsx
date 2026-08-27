@@ -1,6 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 
 // ─── Config ──────────────────────────────────────────────────────────
+// ─── Siglas de variedades ─────────────────────────────────────────────
+const SIGLAS = {
+  "Kordoba Kush": "KK",
+  "Edith 1 INTA": "E1",
+  "Edith 2 INTA": "E2",
+  "Cogollos INTA THC": "CIT",
+  "Cogollos INTA CBD": "CBD",
+};
+
+function getSigla(nombre) {
+  if (!nombre) return "?";
+  for (const [key, sigla] of Object.entries(SIGLAS)) {
+    if (nombre.toLowerCase().includes(key.toLowerCase())) return sigla;
+  }
+  return nombre.slice(0, 3).toUpperCase();
+}
 // ─── API proxy ───────────────────────────────────────────────────────
 async function refreshToken() {
   const refresh = sessionStorage.getItem("cogo_refresh_token");
@@ -144,27 +160,31 @@ function GrupoCard({ grupo, onEstadoChange }) {
       }}
     >
       {/* Cabecera */}
-      <div style={{ padding: "16px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ width: 10, height: 10, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {grupo.socio_nombre || "—"}
           </div>
-          <div style={{ fontSize: 12, color: C.muted }}>
-            {grupo.items.map(i => `${i.producto_nombre} x${i.cantidad}`).join(" · ")} · ${grupo.total.toLocaleString("es-AR")}
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+            {grupo.items.map((item, i) => (
+              <span key={i} style={{ background: C.light, color: C.dark, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 700 }}>
+                {getSigla(item.producto_nombre)} ×{item.cantidad}
+              </span>
+            ))}
+            <span style={{ fontSize: 11, color: C.muted }}>${grupo.total.toLocaleString("es-AR")}</span>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
           <span style={{
             display: "inline-flex", alignItems: "center", gap: 4,
             background: grupo.modalidad === "delivery" ? "#E6F1FB" : "#EAF4ED",
             color: grupo.modalidad === "delivery" ? "#0C447C" : "#1A5C2A",
-            borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700,
+            borderRadius: 20, padding: "3px 8px", fontSize: 10, fontWeight: 700,
           }}>
             {grupo.modalidad === "delivery" ? "🚴 Delivery" : "🏪 Retiro"}
           </span>
           <Badge estado={grupo.estado} />
-          <span style={{ color: C.muted, fontSize: 16 }}>{expanded ? "▲" : "▼"}</span>
         </div>
       </div>
 
