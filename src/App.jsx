@@ -506,6 +506,15 @@ function FormularioAlta() {
 
   const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" };
 
+  // Noindex/nofollow para el formulario
+  useEffect(() => {
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex, nofollow";
+    document.head.appendChild(meta);
+    return () => document.head.removeChild(meta);
+  }, []);
+
   if (enviado) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.pale, fontFamily: F, padding: "40px 6%" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
@@ -770,7 +779,7 @@ function Landing() {
           </button>
         ) : (
           <div style={{ marginLeft: "auto", display: "flex", gap: 24, alignItems: "center" }}>
-            {[["Nosotros","nosotros"],["Cómo funciona","como-funciona"],["Asociarse","asociarse"],["Autocultivo","#/autocultivo"]].map(([l,id]) => (
+            {[["Nosotros","nosotros"],["Cómo funciona","como-funciona"],["Autocultivo","#/autocultivo"]].map(([l,id]) => (
               <button key={id} onClick={() => id.startsWith("#") ? window.location.hash = id : scrollTo(id)} style={{ background: "none", border: "none", color: C.body, cursor: "pointer", fontSize: 15, fontFamily: F, fontWeight: 500 }}>{l}</button>
             ))}
             <button onClick={() => window.location.hash = "#/socios"} style={{ background: C.dark, color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontFamily: F, fontWeight: 700, fontSize: 14 }}>Acceder como socio</button>
@@ -780,11 +789,11 @@ function Landing() {
 
       {isMobile && menuOpen && (
         <div style={{ position: "fixed", top: 64, left: 0, right: 0, zIndex: 99, background: C.white, borderBottom: `1px solid ${C.border}`, padding: "16px 6%", display: "flex", flexDirection: "column", gap: 4, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
-          {[["Nosotros","nosotros"],["Cómo funciona","como-funciona"],["Asociarse","asociarse"]].map(([l,id]) => (
+          {[["Nosotros","nosotros"],["Cómo funciona","como-funciona"]].map(([l,id]) => (
             <button key={id} onClick={() => scrollTo(id)} style={{ background: "none", border: "none", color: C.body, cursor: "pointer", fontSize: 16, fontFamily: F, fontWeight: 500, padding: "12px 0", textAlign: "left", borderBottom: `1px solid ${C.border}` }}>{l}</button>
           ))}
           <button onClick={() => { setMenuOpen(false); window.location.hash = "#/socios"; }} style={{ ...btnGreen, marginTop: 8, padding: 14 }}>Acceder como socio</button>
-          <button onClick={() => { setMenuOpen(false); window.location.hash = "#/asociarse"; }} style={{ background: C.light, color: C.dark, border: "none", borderRadius: 10, padding: 14, fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: F }}>Quiero asociarme</button>
+
         </div>
       )}
 
@@ -802,8 +811,7 @@ function Landing() {
               Trabajamos en conjunto con INTA, UTN y UNC para garantizar la mejor calidad en cada variedad. No cobramos inscripción ni membresía mensual — solo la medicina que retirás.
             </p>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
-              <button onClick={() => window.location.hash = "#/asociarse"} style={{ ...btnGreen, padding: isMobile ? "13px 22px" : "14px 28px", fontSize: isMobile ? 14 : 15, width: isMobile ? "100%" : "auto" }}>Quiero asociarme</button>
-              <button onClick={() => window.location.hash = "#/socios"} style={{ background: "transparent", color: C.green, border: `2px solid ${C.green}`, borderRadius: 10, padding: isMobile ? "13px 22px" : "14px 28px", fontFamily: F, fontWeight: 700, fontSize: isMobile ? 14 : 15, cursor: "pointer", width: isMobile ? "100%" : "auto" }}>Acceso socios →</button>
+              <button onClick={() => window.location.hash = "#/socios"} style={{ ...btnGreen, padding: isMobile ? "13px 22px" : "14px 28px", fontSize: isMobile ? 14 : 15, width: isMobile ? "100%" : "auto" }}>Acceso socios →</button>
             </div>
             <div style={{ display: "inline-block", background: C.light, color: C.dark, borderRadius: 8, padding: "12px 20px", fontSize: isMobile ? 14 : 16, fontWeight: 700 }}>
               Sin membresía mensual · Sin costo de inscripción
@@ -881,7 +889,7 @@ function Landing() {
             ))}
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-            <button onClick={() => window.location.hash = "#/asociarse"} style={{ background: "#6FD67F", color: C.text, border: "none", borderRadius: 10, padding: "14px 28px", fontFamily: F, fontWeight: 700, fontSize: 15, cursor: "pointer", width: isMobile ? "100%" : "auto" }}>Iniciar mi solicitud</button>
+
             <a href="https://wa.me/5493518057172" target="_blank" rel="noreferrer" style={{ background: "transparent", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 10, padding: "14px 28px", fontFamily: F, fontWeight: 600, fontSize: 15, display: "inline-block", width: isMobile ? "100%" : "auto", textAlign: "center" }}>Consultar por WhatsApp</a>
           </div>
         </div>
