@@ -352,6 +352,124 @@ function Delivery({ toast }) {
 }
 
 // ── SOCIOS ───────────────────────────────────────────────────────────
+// ─── SIGLAS DE VARIEDADES ─────────────────────────────────────────────
+const SIGLAS = {
+  "Kordoba Kush": "KK",
+  "Edith 1 INTA": "E1",
+  "Edith 2 INTA": "E2",
+  "Cogollos INTA THC": "CIT",
+  "Cogollos INTA CBD": "CBD",
+};
+
+function getSigla(nombre) {
+  if (!nombre) return "?";
+  for (const [key, sigla] of Object.entries(SIGLAS)) {
+    if (nombre.toLowerCase().includes(key.toLowerCase())) return sigla;
+  }
+  return nombre.slice(0, 3).toUpperCase();
+}
+
+// ─── RESUMEN DEL DÍA ──────────────────────────────────────────────────
+function ResumenDia() {
+  const [pedidos, setPedidos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [turno, setTurno] = useState("lunes");
+
+  useEffect(() => {
+    setLoading(true);
+    sb(`pedidos?select=*,productos(nombre)&estado=neq.cancelado&estado=neq.entregado&order=created_at.desc`)
+      .then(data => { setPedidos(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  // Filtrar por turno
+  const filtrados = pedidos.filter(p => p.turno_delivery === turno);
+
+  // Agrupar por variedad sumando cantidades
+  const porVariedad = filtrados.reduce((acc, p) => {
+    const nombre = p.productos?.nombre || "Sin nombre";
+    const sigla = getSigla(nombre);
+    if (!acc[nombre]) acc[nombre] = { nombre, sigla, cantidad: 0, delivery: 0, retiro: 0 };
+    acc[nombre].cantidad += p.cantidad;
+    if (p.modalidad === "delivery") acc[nombre].delivery += p.cantidad;
+    else acc[nombre].retiro += p.cantidad;
+    return acc;
+  }, {});
+
+  const variedades = Object.values(porVariedad).sort((a, b) => b.cantidad - a.cantidad);
+  const totalUnidades = variedades.reduce((s, v) => s + v.cantidad, 0);
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Resumen del día</h2>
+        <div style={{ display: "flex", gap: 8 }}>
+          {["lunes", "miercoles", "viernes"].map(t => (
+            <button key={t} onClick={() => setTurno(t)} style={{
+              padding: "6px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer",
+              border: "none", fontFamily: F, fontWeight: turno === t ? 700 : 400,
+              background: turno === t ? C.dark : C.light,
+              color: turno === t ? "#fff" : C.muted,
+            }}>
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "40px 0", color: C.muted }}>Cargando...</div>
+      ) : variedades.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
+          <div style={{ fontSize: 15 }}>No hay pedidos pendientes para el {turno}</div>
+        </div>
+      ) : (
+        <div>
+          {/* Resumen visual grande */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 24 }}>
+            {variedades.map(v => (
+              <div key={v.nombre} style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
+                <div style={{ fontSize: 32, fontWeight: 700, color: C.dark, marginBottom: 4 }}>{v.cantidad}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: C.green, marginBottom: 6 }}>{v.sigla}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{v.nombre}</div>
+                <div style={{ display: "flex", justifyContent: "center", gap: 8, fontSize: 11 }}>
+                  <span style={{ background: "#E6F1FB", color: "#0C447C", borderRadius: 10, padding: "2px 8px" }}>🚴 {v.delivery}</span>
+                  <span style={{ background: "#EAF4ED", color: "#1A5C2A", borderRadius: 10, padding: "2px 8px" }}>🏪 {v.retiro}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Total */}
+          <div style={{ background: C.dark, borderRadius: 12, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, fontWeight: 600 }}>TOTAL {turno.toUpperCase()}</span>
+            <span style={{ color: "#fff", fontSize: 28, fontWeight: 700 }}>{totalUnidades} unidades</span>
+          </div>
+
+          {/* Lista detallada para imprimir */}
+          <div style={{ marginTop: 20, background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "12px 20px", background: C.pale, fontSize: 12, fontWeight: 700, color: C.muted, letterSpacing: "0.08em", display: "grid", gridTemplateColumns: "1fr 80px 80px 80px" }}>
+              <span>VARIEDAD</span><span style={{ textAlign: "center" }}>TOTAL</span><span style={{ textAlign: "center" }}>🚴</span><span style={{ textAlign: "center" }}>🏪</span>
+            </div>
+            {variedades.map((v, i) => (
+              <div key={v.nombre} style={{ padding: "12px 20px", borderTop: i > 0 ? `1px solid ${C.border}` : "none", display: "grid", gridTemplateColumns: "1fr 80px 80px 80px", alignItems: "center" }}>
+                <div>
+                  <span style={{ fontWeight: 700, color: C.dark, marginRight: 8 }}>{v.sigla}</span>
+                  <span style={{ fontSize: 13, color: C.muted }}>{v.nombre}</span>
+                </div>
+                <div style={{ textAlign: "center", fontWeight: 700, fontSize: 18, color: C.text }}>{v.cantidad}</div>
+                <div style={{ textAlign: "center", color: "#0C447C" }}>{v.delivery}</div>
+                <div style={{ textAlign: "center", color: "#1A5C2A" }}>{v.retiro}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Socios({ toast }) {
   const [socios, setSocios] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -993,13 +1111,14 @@ function Ventas() {
 
 export default function Dashboard({ onLogout }) {
   const isMobile = useIsMobile();
-  const [seccion, setSeccion] = useState("pedidos");
+  const [seccion, setSeccion] = useState("resumen");
   const [toastMsg, setToastMsg] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
 
   const toast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(""), 2500); };
 
   const secciones = [
+    { id: "resumen", label: "Resumen día" },
     { id: "pedidos", label: "Pedidos" },
     { id: "delivery", label: "Delivery" },
     { id: "facturacion", label: "Facturación" },
@@ -1044,6 +1163,7 @@ export default function Dashboard({ onLogout }) {
 
       {/* Contenido */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "24px 4%" : "32px 6%" }}>
+        {seccion === "resumen" && <ResumenDia />}
         {seccion === "pedidos" && <Pedidos toast={toast} />}
         {seccion === "delivery" && <Delivery toast={toast} />}
         {seccion === "facturacion" && <Facturacion toast={toast} />}
