@@ -325,7 +325,9 @@ function ZonaSocios({ socio, onLogout }) {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 14, borderTop: `1px solid ${info.color}20` }}>
                       <div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: C.dark }}>${Number(p.precio).toLocaleString("es-AR")}</div>
-                        <div style={{ fontSize: 11, color: C.muted }}>{p.gramos_por_unidad || 5}g por unidad</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>
+  {p.unidad === 'ml' ? `${p.ml_por_unidad || 10}ml por unidad` : `${p.gramos_por_unidad || 5}g por unidad`}
+</div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <button onClick={() => setCantidades(c => ({ ...c, [p.id]: Math.max(0, (c[p.id]||0)-1) }))} style={{ width: 32, height: 32, borderRadius: "50%", border: `1.5px solid ${info.color}`, background: "transparent", cursor: "pointer", fontSize: 18, color: info.color, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
