@@ -669,7 +669,7 @@ function Productos({ toast }) {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
-  const [form, setForm] = useState({ nombre: "", descripcion: "", variedad: "", efecto: "", momento_dia: "", precio: "", stock: 0, precio_por_gramo: "", gramos_por_unidad: 5, activo: true });
+  const [form, setForm] = useState({ nombre: "", descripcion: "", variedad: "", efecto: "", momento_dia: "", precio: "", stock: 0, precio_por_gramo: "", gramos_por_unidad: 5, unidad: "g", ml_por_unidad: "", activo: true });
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -681,18 +681,18 @@ function Productos({ toast }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const abrirNuevo = () => { setEditando(null); setForm({ nombre: "", descripcion: "", variedad: "", efecto: "", momento_dia: "", precio: "", stock: 0, precio_por_gramo: "", gramos_por_unidad: 5, activo: true }); setModal(true); };
-  const abrirEditar = (p) => { setEditando(p.id); setForm({ nombre: p.nombre||"", descripcion: p.descripcion||"", variedad: p.variedad||"", efecto: p.efecto||"", momento_dia: p.momento_dia||"", precio: p.precio||"", stock: p.stock||0, precio_por_gramo: p.precio_por_gramo||"", gramos_por_unidad: p.gramos_por_unidad||5, activo: p.activo !== false }); setModal(true); };
+  const abrirNuevo = () => { setEditando(null); setForm({ nombre: "", descripcion: "", variedad: "", efecto: "", momento_dia: "", precio: "", stock: 0, precio_por_gramo: "", gramos_por_unidad: 5, unidad: "g", ml_por_unidad: "", activo: true }); setModal(true); };
+  const abrirEditar = (p) => { setEditando(p.id); setForm({ nombre: p.nombre||"", descripcion: p.descripcion||"", variedad: p.variedad||"", efecto: p.efecto||"", momento_dia: p.momento_dia||"", precio: p.precio||"", stock: p.stock||0, precio_por_gramo: p.precio_por_gramo||"", gramos_por_unidad: p.gramos_por_unidad||5, unidad: p.unidad||"g", ml_por_unidad: p.ml_por_unidad||"", activo: p.activo !== false }); setModal(true); };
 
   const guardar = async () => {
     if (!form.nombre || !form.precio) return toast("Nombre y precio son obligatorios");
     setSaving(true);
     if (editando) {
-      await sb(`productos?id=eq.${editando}`, { method: "PATCH", body: JSON.stringify({ ...form, precio: Number(form.precio), stock: Number(form.stock), precio_por_gramo: Number(form.precio_por_gramo), gramos_por_unidad: Number(form.gramos_por_unidad) }) });
+      await sb(`productos?id=eq.${editando}`, { method: "PATCH", body: JSON.stringify({ ...form, precio: Number(form.precio), stock: Number(form.stock), precio_por_gramo: Number(form.precio_por_gramo), gramos_por_unidad: Number(form.gramos_por_unidad), ml_por_unidad: form.ml_por_unidad ? Number(form.ml_por_unidad) : null }) });
       toast("Producto actualizado");
       await load();
     } else {
-      await sb("productos", { method: "POST", body: JSON.stringify({ ...form, precio: Number(form.precio), stock: Number(form.stock), precio_por_gramo: Number(form.precio_por_gramo), gramos_por_unidad: Number(form.gramos_por_unidad) }) });
+      await sb("productos", { method: "POST", body: JSON.stringify({ ...form, precio: Number(form.precio), stock: Number(form.stock), precio_por_gramo: Number(form.precio_por_gramo), gramos_por_unidad: Number(form.gramos_por_unidad), ml_por_unidad: form.ml_por_unidad ? Number(form.ml_por_unidad) : null }) });
       toast("Producto creado");
       await load();
     }
@@ -785,6 +785,17 @@ function Productos({ toast }) {
             <Field label="Stock"><input type="number" value={form.stock} onChange={e => setForm(f=>({...f, stock: e.target.value}))} style={inputStyle} /></Field>
             <Field label="Precio por gramo ($)"><input type="number" value={form.precio_por_gramo} onChange={e => setForm(f=>({...f, precio_por_gramo: e.target.value}))} style={inputStyle} /></Field>
             <Field label="Gramos por unidad"><input type="number" value={form.gramos_por_unidad} onChange={e => setForm(f=>({...f, gramos_por_unidad: e.target.value}))} style={inputStyle} /></Field>
+            <Field label="Unidad de venta">
+              <select value={form.unidad} onChange={e => setForm(f=>({...f, unidad: e.target.value}))} style={inputStyle}>
+                <option value="g">Gramos (flores secas)</option>
+                <option value="ml">Mililitros (aceites)</option>
+              </select>
+            </Field>
+            {form.unidad === 'ml' && (
+              <Field label="ml por unidad">
+                <input type="number" value={form.ml_por_unidad} onChange={e => setForm(f=>({...f, ml_por_unidad: e.target.value}))} style={inputStyle} placeholder="Ej: 10" />
+              </Field>
+            )}
           </div>
           <Field label="Efecto"><input value={form.efecto} onChange={e => setForm(f=>({...f, efecto: e.target.value}))} placeholder="Ej: Relajante · feliz · equilibrada" style={inputStyle} /></Field>
           <Field label="Activo">
