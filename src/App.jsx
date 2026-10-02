@@ -211,7 +211,7 @@ function ZonaSocios({ socio, onLogout }) {
   const [pedidos, setPedidos] = useState([]);
 
   useEffect(() => {
-    sb("productos?select=*&activo=eq.true&order=nombre").then(data => setProductos(Array.isArray(data) ? data : []));
+    sb("productos?select=*&activo=eq.true&stock=gt.0&order=nombre").then(data => setProductos(Array.isArray(data) ? data : []));
     sb("rpc/pedidos_de_socio", {
       method: "POST",
       headers: { Prefer: "return=representation" },
