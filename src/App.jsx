@@ -306,7 +306,7 @@ function ZonaSocios({ socio, onLogout }) {
           <div>
             <div style={{ marginBottom: 28 }}>
               <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Variedades disponibles</h2>
-              <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>Variedades de desarrollo propio, registradas en conjunto con INTA en el Instituto Nacional de Semillas (INASE). Cultivadas con estándares agroecológicos y trazabilidad completa. Los retiros se coordinan los lunes, miércoles y viernes — también tenemos delivery.</p>
+              <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>Variedades de desarrollo propio, registradas en conjunto con INTA en el Instituto Nacional de Semillas (INASE). Cultivadas con estándares agroecológicos y trazabilidad completa. Los retiros se coordinan los lunes y jueves — también tenemos delivery.</p>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 32 }}>
@@ -355,8 +355,7 @@ function ZonaSocios({ socio, onLogout }) {
                     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{modalidad === "retiro" ? "Día de retiro" : "Día de entrega"}</label>
                     <select value={turno} onChange={e => setTurno(e.target.value)} style={{ ...inputStyle }}>
                       <option value="lunes">Lunes</option>
-                      <option value="miercoles">Miércoles</option>
-                      <option value="viernes">Viernes</option>
+                      <option value="jueves">Jueves</option>
                     </select>
                   </div>
                   <div>
@@ -853,7 +852,7 @@ function Landing() {
             {[
               { icon: "📋", titulo: "Marco legal", desc: "Todo funciona dentro del registro REPROCANN del Ministerio de Salud. La vinculación a nuestra ONG es el mecanismo legal que habilita el cultivo colectivo y te protege como paciente." },
               { icon: "🌱", titulo: "Cultivo propio", desc: "Nuestro equipo cultiva las variedades en nombre de los socios vinculados. Variedades propias, registradas con INTA, con trazabilidad y continuidad garantizada." },
-              { icon: "📦", titulo: "Retiro coordinado", desc: "Retirás los lunes, miércoles y viernes. También tenemos delivery. El pedido se coordina con al menos un día de anticipación y te avisamos por WhatsApp cuando está listo." },
+              { icon: "📦", titulo: "Retiro coordinado", desc: "Retirás los lunes y jueves. También tenemos delivery. El pedido se coordina con al menos un día de anticipación y te avisamos por WhatsApp cuando está listo." },
             ].map(item => (
               <div key={item.titulo} style={{ background: C.white, borderRadius: 12, padding: "28px 24px", border: `1px solid ${C.border}` }}>
                 <div style={{ fontSize: 32, marginBottom: 16 }}>{item.icon}</div>
@@ -900,7 +899,7 @@ function Landing() {
               { q: "¿Cuánto puedo retirar por mes?", r: "Lo que necesités. REPROCANN permite circular con hasta 40g y 6 aceites de 30ml." },
               { q: "¿Puedo recomendar a alguien?", r: "Claro, pasales nuestro número de WhatsApp y los acompañamos desde el primer mensaje." },
               { q: "¿Qué productos puedo retirar?", r: "Flor seca de variedades propias y derivados de cannabis sativa. Próximamente aceites. El catálogo completo está disponible desde la zona de socios." },
-              { q: "¿Hacen delivery?", r: "Sí, los mismos días que los retiros: lunes, miércoles y viernes. Lo coordinamos por WhatsApp." },
+              { q: "¿Hacen delivery?", r: "Sí, los mismos días que los retiros: lunes y jueves. Lo coordinamos por WhatsApp." },
             ].map((f, i) => (
               <div key={i} style={{ background: C.pale, borderRadius: 12, padding: "20px 24px", border: `1px solid ${C.border}` }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 8 }}>{f.q}</div>
