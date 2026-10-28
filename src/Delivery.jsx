@@ -365,7 +365,7 @@ function DeliveryView({ onLogout }) {
     todos: grupos.length,
   };
 
-  const ORDEN_TURNOS = ["lunes", "miercoles", "viernes", "sin turno"];
+  const ORDEN_TURNOS = ["lunes", "miercoles", "jueves", "viernes", "sin turno"];
   const porTurno = gruposFiltrados.reduce((acc, g) => {
     const turno = g.turno_delivery || "sin turno";
     if (!acc[turno]) acc[turno] = [];
